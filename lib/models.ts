@@ -20,7 +20,7 @@ export interface FactorAxiomPair {
 }
 
 export interface ScaleGroup {
-  group_type: string; // self | inner_circle | tribe | citizens
+  group_type: string; // self | inner_circle | tribe | citizens | outsiders
   count: number;
   description?: string;
 }

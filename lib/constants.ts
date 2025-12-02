@@ -7,6 +7,7 @@ export const DEFAULT_SOCIAL_WEIGHTS: Record<string, number> = {
   inner_circle: 0.8,
   tribe: 0.5,
   citizens: 0.3,
+  outsiders: 0.1,
 };
 
 export const RELATIVE_STRENGTH_THRESHOLDS = {
@@ -18,49 +19,49 @@ export const DEFAULT_AXIOMS: Axiom[] = [
   {
     id: "life_health",
     name: "Life and Physical Health",
-    description: "Survival, injury, disease burden",
+    description: "e.g., death, illness, injury, longevity",
     default_weight: 0.5,
   },
   {
     id: "bodily_autonomy",
-    name: "Bodily Autonomy and Self-Ownership",
-    description: "Control of body, medical consent",
+    name: "Bodily Autonomy",
+    description: "e.g., medical decisions, physical consent",
     default_weight: 0.5,
   },
   {
     id: "civil_liberty",
-    name: "Freedom from Coercion / Civil Liberty",
-    description: "Speech, movement, state force",
+    name: "Civil Liberty",
+    description: "e.g., free speech, privacy, movement",
     default_weight: 0.5,
   },
   {
     id: "suffering_wellbeing",
-    name: "Suffering and Wellbeing",
-    description: "Pain, joy, mental health, quality of experience",
+    name: "Suffering / Wellbeing",
+    description: "e.g., stress, happiness, mental health",
     default_weight: 0.5,
   },
   {
     id: "fairness_equality",
     name: "Fairness / Equal Rules",
-    description: "Procedural justice, discrimination",
+    description: "e.g., equal treatment, fair processes",
     default_weight: 0.5,
   },
   {
     id: "truth_epistemic",
-    name: "Truth and Epistemic Integrity",
-    description: "Honesty, accuracy, manipulation",
+    name: "Truth / Epistemic",
+    description: "e.g., honesty, transparency, informed consent",
     default_weight: 0.5,
   },
   {
     id: "long_term_capacity",
-    name: "Long-term Societal Capacity / Future Potential",
-    description: "Innovation, resilience",
+    name: "Long-term Capacity",
+    description: "e.g., sustainability, future generations",
     default_weight: 0.5,
   },
   {
     id: "social_trust",
-    name: "Social Trust and Cohesion",
-    description: "Legitimacy, stability, institutional trust",
+    name: "Social Trust",
+    description: "e.g., institutional trust, community bonds",
     default_weight: 0.5,
   },
 ];
