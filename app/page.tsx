@@ -14,6 +14,28 @@ import {
 } from "../lib/profile";
 import { DEFAULT_AXIOMS } from "../lib/constants";
 
+const compactFormatter = new Intl.NumberFormat("en", {
+  notation: "compact",
+  maximumFractionDigits: 1,
+  minimumFractionDigits: 1,
+});
+
+const formatCompact = (value: number) => {
+  const formatted = compactFormatter.format(value);
+  const match = formatted.match(/^([+-]?[0-9.,]+)([A-Za-z]*)$/);
+  return {
+    formatted,
+    numberPart: match?.[1] ?? formatted,
+    suffix: match?.[2] ?? "",
+  };
+};
+
+const renderCompactValue = (value: number, withSign = true) => {
+  const { formatted } = formatCompact(value);
+  const sign = value > 0 && withSign ? "+" : "";
+  return <>{sign}{formatted}</>;
+};
+
 type Status = { type: "idle" | "error" | "success"; message: string };
 type Tab = "input" | "calibration" | "reference";
 type IntensityAnchor = { id: string; value: number; label: string };
@@ -41,6 +63,7 @@ export default function Home() {
   const [status, setStatus] = useState<Status>({ type: "idle", message: "" });
   const [profile, setProfile] = useState<Profile>(defaultProfile);
   const [showPrompt, setShowPrompt] = useState(false);
+  const [showInputModal, setShowInputModal] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("input");
   const [intensityAnchors, setIntensityAnchors] = useState<IntensityAnchor[]>(DEFAULT_INTENSITY_ANCHORS);
   const [newAnchorLabel, setNewAnchorLabel] = useState("");
@@ -82,7 +105,14 @@ export default function Home() {
         setStatus({ type: "error", message: errors.join("; ") });
         return;
       }
-      const scored = scoreDecision(parsed, profile.axiomWeights, profile.socialWeights, profile.moralHalfLifeYears);
+      const scored = scoreDecision(
+        parsed,
+        profile.axiomWeights,
+        profile.socialClasses,
+        profile.timeStance,
+        profile.customAnchors || [],
+        profile.muCalibration
+      );
       setDecision(parsed);
       setResult(scored);
       setStatus({ type: "success", message: "Scored successfully" });
@@ -94,7 +124,14 @@ export default function Home() {
 
   const breakdown = useMemo(() => {
     if (!result || !decision) return "";
-    return formatScoreBreakdown(result, decision, profile.moralHalfLifeYears, profile.axiomWeights, profile.socialWeights);
+    return formatScoreBreakdown(
+      result,
+      decision,
+      profile.timeStance,
+      profile.axiomWeights,
+      profile.socialClasses,
+      profile.customAnchors || []
+    );
   }, [result, decision, profile]);
 
   useEffect(() => {
@@ -108,12 +145,48 @@ export default function Home() {
     persistProfile({ ...profile, axiomWeights: { ...profile.axiomWeights, [id]: value } });
   };
 
-  const updateSocialWeight = (id: string, value: number) => {
-    persistProfile({ ...profile, socialWeights: { ...profile.socialWeights, [id]: value } });
+  const updateSocialClass = (id: string, field: 'label' | 'weight', value: string | number) => {
+    const updated = profile.socialClasses.map(c =>
+      c.id === id ? { ...c, [field]: value } : c
+    );
+    persistProfile({ ...profile, socialClasses: updated });
   };
 
-  const updateMoralHalfLife = (value: number) => {
-    persistProfile({ ...profile, moralHalfLifeYears: value });
+  const addSocialClass = () => {
+    const newClass = {
+      id: `custom_${Date.now()}`,
+      label: "New Class",
+      weight: 0.5
+    };
+    persistProfile({ ...profile, socialClasses: [...profile.socialClasses, newClass] });
+  };
+
+  const deleteSocialClass = (id: string) => {
+    persistProfile({ ...profile, socialClasses: profile.socialClasses.filter(c => c.id !== id) });
+  };
+
+  const updateTimeStance = (updates: Partial<typeof profile.timeStance>) => {
+    persistProfile({ ...profile, timeStance: { ...profile.timeStance, ...updates } });
+  };
+
+  const updateDecisionOnly = (updater: (factors: Factor[]) => Factor[]) => {
+    if (!decision) return;
+    const updatedFactors = updater(decision.factors);
+    const updatedDecision = { ...decision, factors: updatedFactors };
+    setDecision(updatedDecision);
+  };
+
+  const rescoreDecision = () => {
+    if (!decision) return;
+    const rescored = scoreDecision(
+      decision,
+      profile.axiomWeights,
+      profile.socialClasses,
+      profile.timeStance,
+      profile.customAnchors || [],
+      profile.muCalibration
+    );
+    setResult(rescored);
   };
 
   const updateDecision = (updater: (factors: Factor[]) => Factor[]) => {
@@ -121,7 +194,14 @@ export default function Home() {
     const updatedFactors = updater(decision.factors);
     const updatedDecision = { ...decision, factors: updatedFactors };
     setDecision(updatedDecision);
-    const rescored = scoreDecision(updatedDecision, profile.axiomWeights, profile.socialWeights, profile.moralHalfLifeYears);
+    const rescored = scoreDecision(
+      updatedDecision,
+      profile.axiomWeights,
+      profile.socialClasses,
+      profile.timeStance,
+      profile.customAnchors || [],
+      profile.muCalibration
+    );
     setResult(rescored);
   };
 
@@ -156,9 +236,6 @@ export default function Home() {
             </div>
             <nav className="flex items-center gap-2">
               <a href="/user-guide" className="btn btn-ghost btn-sm">
-                <svg className="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
                 User Guide
               </a>
             </nav>
@@ -167,29 +244,58 @@ export default function Home() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Tab Navigation */}
-        <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg w-fit mb-6">
-          {[
-            { id: "input" as Tab, label: "Input & Score", icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" },
-            { id: "calibration" as Tab, label: "Calibration", icon: "M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" },
-            { id: "reference" as Tab, label: "Reference", icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                activeTab === tab.id
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={tab.icon} />
-              </svg>
-              {tab.label}
-            </button>
-          ))}
+        {/* Tab Navigation and Action Buttons */}
+        <div className="flex items-center justify-between gap-3 mb-6">
+          <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg">
+            {[
+              { id: "input" as Tab, label: "Input & Score", icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" },
+              { id: "calibration" as Tab, label: "Calibration", icon: "M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" },
+              { id: "reference" as Tab, label: "Reference", icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activeTab === tab.id
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={tab.icon} />
+                </svg>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {activeTab === "input" && (
+            <div className="flex items-center gap-2">
+              <button onClick={() => setShowInputModal(true)} className="btn btn-ghost btn-sm">
+                View Input
+              </button>
+              <button onClick={() => setShowPrompt(true)} className="btn btn-ghost btn-sm">
+                View Prompt
+              </button>
+              <button onClick={copyPrompt} className="btn btn-ghost btn-sm">
+                Copy Prompt
+              </button>
+              <button onClick={pasteJson} className="btn btn-ghost btn-sm">
+                <svg className="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                Paste from Clipboard
+              </button>
+              <button onClick={runScore} className="btn btn-primary btn-sm">
+                <svg className="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                Score Decision
+              </button>
+            </div>
+          )}
         </div>
+
 
         {/* Status Message */}
         {status.type !== "idle" && (
@@ -215,76 +321,9 @@ export default function Home() {
 
         {/* Input Tab */}
         {activeTab === "input" && (
-          <div className="grid lg:grid-cols-2 gap-6">
-            {/* Left Column - Input */}
-            <div className="space-y-4">
-              <div className="card">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h2 className="section-title">Decision JSON</h2>
-                    <p className="section-subtitle">Paste AI-generated decision JSON or edit the example</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => setShowPrompt(true)} className="btn btn-ghost btn-sm">
-                      View Prompt
-                    </button>
-                    <button onClick={copyPrompt} className="btn btn-primary btn-sm">
-                      Copy Prompt
-                    </button>
-                  </div>
-                </div>
-                <textarea
-                  className="textarea h-64 scrollbar-thin"
-                  value={inputJson}
-                  onChange={(e) => setInputJson(e.target.value)}
-                  placeholder="Paste decision JSON here..."
-                  spellCheck={false}
-                />
-                <div className="flex items-center gap-3 mt-4">
-                  <button onClick={pasteJson} className="btn btn-ghost">
-                    <svg className="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                    Paste from Clipboard
-                  </button>
-                  <button onClick={runScore} className="btn btn-primary">
-                    <svg className="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                    Score Decision
-                  </button>
-                </div>
-              </div>
-
-              {/* Quick Settings */}
-              <div className="card">
-                <h3 className="text-sm font-semibold text-slate-700 mb-3">Quick Settings</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="label-sm">Moral Half-Life (years)</label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={200}
-                      value={profile.moralHalfLifeYears}
-                      onChange={(e) => updateMoralHalfLife(parseFloat(e.target.value) || 30)}
-                      className="input input-sm mt-1"
-                    />
-                    <p className="text-xs text-slate-500 mt-1">How far until future impacts count 50%</p>
-                  </div>
-                  <div className="flex items-end">
-                    <button onClick={() => setActiveTab("calibration")} className="btn btn-ghost btn-sm w-full">
-                      All Settings →
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column - Results */}
-            <div className="space-y-4">
-              {result && decision ? (
-                <>
+          <div className="space-y-4">
+            {result && decision ? (
+              <>
                   {/* Result Summary */}
                   <div className={`card border-2 ${
                     result.result === "YES" ? "border-emerald-200 bg-emerald-50/30" :
@@ -300,14 +339,83 @@ export default function Home() {
                           <span className={`badge ${getStrengthBadge(result.strength)}`}>
                             {result.strength.replace(/_/g, " ")}
                           </span>
+                          <span className="text-xs text-slate-500">
+                            ({(result.strength_ratio * 100).toFixed(1)}% alignment)
+                          </span>
                         </div>
-                        <p className="text-slate-600 mt-1">
-                          Total Score: <span className="font-semibold">{result.total_score.toFixed(3)}</span>
-                        </p>
+                        <div className="text-sm text-slate-600 mt-2 space-y-1">
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-4">
+                              <span>
+                                Transition: <span className={`font-semibold ${result.transition_total_MU >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                                  {renderCompactValue(result.transition_total_MU)} MU
+                                </span>
+                              </span>
+                              <span>
+                                Case flow: <span className={`font-semibold ${result.case_flow_MU_per_year >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                                  {renderCompactValue(result.case_flow_MU_per_year)} MU/yr
+                                </span>
+                              </span>
+                              <span>
+                                Structural: <span className={`font-semibold ${result.structural_MU_per_year >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                                  {renderCompactValue(result.structural_MU_per_year)} MU/yr
+                                </span>
+                              </span>
+                            </div>
+                            <p>
+                              Total: <span className="font-semibold">{renderCompactValue(result.total_score)} MU</span>
+                              {result.total_score_usd !== undefined && (
+                                <span className="text-sm ml-2">
+                                  (${result.total_score_usd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right space-y-1">
                         <p className="text-xs text-slate-500">Top contributors</p>
-                        <p className="text-sm text-slate-700">{result.top_contributors.slice(0, 2).join(", ")}</p>
+                        {(() => {
+                          const factorName = (id: string) =>
+                            decision.factors.find((f) => f.id === id)?.name || id;
+                          const topTransition = [...result.factor_scores]
+                            .filter((fs) => fs.temporal_profile === "transition")
+                            .sort((a, b) => Math.abs(b.total_score) - Math.abs(a.total_score))
+                            .slice(0, 2)
+                            .map((fs) => factorName(fs.factor_id));
+                          const topCaseFlow = [...result.factor_scores]
+                            .filter((fs) => fs.temporal_profile === "steady_case_flow")
+                            .sort((a, b) => Math.abs(b.total_score) - Math.abs(a.total_score))
+                            .slice(0, 2)
+                            .map((fs) => factorName(fs.factor_id));
+                          const topStructural = [...result.factor_scores]
+                            .filter((fs) => fs.temporal_profile === "steady_structural")
+                            .sort((a, b) => Math.abs(b.total_score) - Math.abs(a.total_score))
+                            .slice(0, 2)
+                            .map((fs) => factorName(fs.factor_id));
+                          return (
+                            <>
+                              <div>
+                                <p className="text-[11px] uppercase tracking-wide text-slate-400">Transition</p>
+                                <p className="text-sm text-slate-700">
+                                  {topTransition.length > 0 ? topTransition.join(", ") : "—"}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-[11px] uppercase tracking-wide text-slate-400">Case flow</p>
+                                <p className="text-sm text-slate-700">
+                                  {topCaseFlow.length > 0 ? topCaseFlow.join(", ") : "—"}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-[11px] uppercase tracking-wide text-slate-400">Structural</p>
+                                <p className="text-sm text-slate-700">
+                                  {topStructural.length > 0 ? topStructural.join(", ") : "—"}
+                                </p>
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
 
@@ -319,174 +427,799 @@ export default function Home() {
                     )}
                   </div>
 
-                  {/* Factor Breakdown */}
-                  <div className="card">
-                    <h3 className="section-title mb-4">Factor Breakdown</h3>
-                    <div className="space-y-3">
-                      {[...result.factor_scores]
-                        .sort((a, b) => Math.abs(b.total_score) - Math.abs(a.total_score))
-                        .map((fs) => {
-                          const factor = decision.factors.find((f) => f.id === fs.factor_id);
-                          if (!factor) return null;
-                          const isPositive = fs.total_score > 0;
-                          return (
-                            <details key={fs.factor_id} className="group border border-slate-200 rounded-lg overflow-hidden">
-                              <summary className="flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 transition-colors">
-                                <div className="flex items-center gap-3">
-                                  <div className={`w-2 h-2 rounded-full ${isPositive ? "bg-emerald-500" : "bg-red-500"}`} />
-                                  <span className="font-medium text-slate-900">{factor.name}</span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                  <span className={`text-sm font-semibold ${isPositive ? "text-emerald-600" : "text-red-600"}`}>
-                                    {isPositive ? "+" : ""}{fs.total_score.toFixed(3)}
-                                  </span>
+                  {/* Scope and Excluded Scenarios */}
+                  {(decision.scope || (decision.excluded_scenarios && decision.excluded_scenarios.length > 0)) && (
+                    <div className="card bg-blue-50/30 border border-blue-200">
+                      {decision.scope && (
+                        <div className="mb-4">
+                          <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-1">Analysis Scope</p>
+                          <p className="text-sm text-slate-700">{decision.scope}</p>
+                        </div>
+                      )}
+                      {decision.excluded_scenarios && decision.excluded_scenarios.length > 0 && (
+                        <div className={decision.scope ? "pt-4 border-t border-blue-200" : ""}>
+                          <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-2">Excluded Edge Cases</p>
+                          <p className="text-xs text-slate-600 mb-3">These scenarios are fundamentally different questions and require separate analysis:</p>
+                          <div className="space-y-3">
+                            {decision.excluded_scenarios.map((excluded, idx) => (
+                              <details key={idx} className="group bg-white border border-blue-100 rounded-lg overflow-hidden">
+                                <summary className="p-3 hover:bg-blue-50 cursor-pointer transition-colors flex items-center justify-between">
+                                  <span className="text-sm font-medium text-slate-800">{excluded.scenario}</span>
                                   <svg className="w-4 h-4 text-slate-400 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                   </svg>
-                                </div>
-                              </summary>
-                              <div className="p-4 bg-white space-y-4">
-                                <p className="text-sm text-slate-600">{factor.description}</p>
-                                <div className="grid grid-cols-2 gap-2 text-xs">
-                                  <div className="bg-slate-50 p-2 rounded">
-                                    <span className="text-slate-500">What changes:</span>
-                                    <p className="text-slate-700">{factor.what_changes}</p>
+                                </summary>
+                                <div className="px-3 pb-3 space-y-2">
+                                  <div>
+                                    <p className="text-xs text-slate-500 font-semibold">Why separate:</p>
+                                    <p className="text-xs text-slate-700">{excluded.why_separate}</p>
                                   </div>
-                                  <div className="bg-slate-50 p-2 rounded">
-                                    <span className="text-slate-500">Who affected:</span>
-                                    <p className="text-slate-700">{factor.who_affected}</p>
+                                  <div>
+                                    <p className="text-xs text-slate-500 font-semibold">Different question:</p>
+                                    <p className="text-xs text-slate-700 italic">&ldquo;{excluded.separate_question}&rdquo;</p>
                                   </div>
                                 </div>
+                              </details>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
-                                {/* Axiom Pairs */}
-                                <div>
-                                  <h4 className="text-sm font-semibold text-slate-700 mb-2">Axiom Parameters</h4>
-                                  {factor.axiom_pairs.map((pair, idx) => (
-                                    <div key={`${pair.axiom_id}-${idx}`} className="border border-slate-100 rounded-lg p-3 mb-2 bg-slate-50/50">
-                                      <div className="text-sm font-medium text-slate-800 mb-2">{pair.axiom_id.replace(/_/g, " ")}</div>
-                                      <div className="grid grid-cols-3 gap-2">
-                                        <div>
-                                          <label className="label-sm">Intensity/yr</label>
-                                          <input
-                                            type="number"
-                                            min={0} max={1} step={0.01}
-                                            value={pair.intensity_per_year}
-                                            onChange={(e) => updateDecision((factors) => {
-                                              const copy = structuredClone(factors);
-                                              copy.find((f) => f.id === factor.id)!.axiom_pairs[idx].intensity_per_year = parseFloat(e.target.value);
-                                              return copy;
-                                            })}
-                                            className="input input-sm"
-                                          />
+                  {/* Temporal Profile Summary */}
+                  <div className="card">
+                    <h3 className="section-title mb-4">Impact Timeline</h3>
+                    <div className="grid md:grid-cols-3 gap-4 items-stretch">
+                      {/* Transition Section */}
+                      <div className="border border-blue-200 rounded-lg p-4 bg-blue-50/30 md:col-span-1">
+                        <h4 className="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Transition Impacts
+                        </h4>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-slate-600">Total MU (transition):</span>
+                            <span className={`font-semibold ${result.transition_total_MU >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                              {renderCompactValue(result.transition_total_MU)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-600">Population:</span>
+                            <span className="font-medium text-slate-800">
+                              {result.transition_total_population.toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-600">MU per capita:</span>
+                            <span className={`font-semibold ${result.transition_MU_per_capita >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                              {renderCompactValue(result.transition_MU_per_capita)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-600">MU per person-year:</span>
+                            <span className={`font-semibold ${result.transition_MU_per_year_population >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                              {renderCompactValue(result.transition_MU_per_year_population)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Steady Flow Section */}
+                      <div className="border border-purple-200 rounded-lg p-4 bg-purple-50/30 md:col-span-2">
+                        <h4 className="text-sm font-semibold text-purple-900 mb-3 flex items-center gap-2">
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          Steady Flows (per policy-year)
+                        </h4>
+                        <div className="grid sm:grid-cols-2 gap-3 text-sm divide-y sm:divide-y-0 sm:divide-x divide-purple-100">
+                          <div className="space-y-2 sm:pr-3">
+                            <p className="text-xs font-semibold text-purple-800 uppercase tracking-wide">Case flow</p>
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">MU per year:</span>
+                              <span className={`font-semibold ${result.case_flow_MU_per_year >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                                {renderCompactValue(result.case_flow_MU_per_year)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Population:</span>
+                              <span className="font-medium text-slate-800">
+                                {result.case_flow_total_population.toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">MU per capita per year:</span>
+                              <span className={`font-semibold ${result.case_flow_MU_per_capita_per_year >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                                {renderCompactValue(result.case_flow_MU_per_capita_per_year)}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="space-y-2 sm:pl-3">
+                            <p className="text-xs font-semibold text-purple-800 uppercase tracking-wide">Structural</p>
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">MU per year:</span>
+                              <span className={`font-semibold ${result.structural_MU_per_year >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                                {renderCompactValue(result.structural_MU_per_year)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">Population:</span>
+                              <span className="font-medium text-slate-800">
+                                {result.structural_total_population.toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">MU per capita per year:</span>
+                              <span className={`font-semibold ${result.structural_MU_per_capita_per_year >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                                {renderCompactValue(result.structural_MU_per_capita_per_year)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-2 italic">
+                          Per year, if current structure persists
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Transition Impact Time Graph */}
+                  {result.transition_time_graph && result.transition_time_graph.length > 1 && (
+                    <div className="card">
+                      <h3 className="section-title mb-4">Transition Impact Over Time</h3>
+                      <div className="h-64 relative">
+                        <svg viewBox="0 0 800 250" className="w-full h-full">
+                          {/* Background grid */}
+                          <defs>
+                            <pattern id="grid" width="40" height="25" patternUnits="userSpaceOnUse">
+                              <path d="M 40 0 L 0 0 0 25" fill="none" stroke="#e2e8f0" strokeWidth="0.5"/>
+                            </pattern>
+                          </defs>
+                          <rect width="800" height="250" fill="url(#grid)" />
+
+                          {/* Calculate scales */}
+                          {(() => {
+                            const maxYear = Math.max(...result.transition_time_graph.map(p => p.year));
+                            const maxAbsMU = Math.max(...result.transition_time_graph.map(p => Math.abs(p.mu_per_year)));
+                            const minMU = Math.min(...result.transition_time_graph.map(p => p.mu_per_year));
+                            const maxMU = Math.max(...result.transition_time_graph.map(p => p.mu_per_year));
+
+                            const padding = 40;
+                            const width = 800 - 2 * padding;
+                            const height = 250 - 2 * padding;
+
+                            const xScale = (year: number) => padding + (year / maxYear) * width;
+                            const yScale = (mu: number) => {
+                              const range = maxMU - minMU;
+                              return padding + height - ((mu - minMU) / range) * height;
+                            };
+
+                            // Zero line
+                            const zeroY = yScale(0);
+
+                            // Generate path
+                            const path = result.transition_time_graph
+                              .map((p, i) => {
+                                const x = xScale(p.year);
+                                const y = yScale(p.mu_per_year);
+                                return i === 0 ? `M ${x} ${y}` : `L ${x} ${y}`;
+                              })
+                              .join(" ");
+
+                            return (
+                              <>
+                                {/* Zero line */}
+                                <line
+                                  x1={padding}
+                                  y1={zeroY}
+                                  x2={800 - padding}
+                                  y2={zeroY}
+                                  stroke="#94a3b8"
+                                  strokeWidth="1"
+                                  strokeDasharray="4 2"
+                                />
+
+                                {/* Area fill */}
+                                <path
+                                  d={`${path} L ${xScale(maxYear)} ${zeroY} L ${xScale(0)} ${zeroY} Z`}
+                                  fill={maxMU >= 0 ? "#10b98166" : "#ef444466"}
+                                  stroke="none"
+                                />
+
+                                {/* Line */}
+                                <path
+                                  d={path}
+                                  fill="none"
+                                  stroke={maxMU >= 0 ? "#10b981" : "#ef4444"}
+                                  strokeWidth="2"
+                                />
+
+                                {/* Axes */}
+                                <line x1={padding} y1={padding} x2={padding} y2={250 - padding} stroke="#475569" strokeWidth="1.5" />
+                                <line x1={padding} y1={250 - padding} x2={800 - padding} y2={250 - padding} stroke="#475569" strokeWidth="1.5" />
+
+                                {/* Labels */}
+                                <text x={400} y={240} textAnchor="middle" fontSize="12" fill="#475569">Years from now</text>
+                                <text x={20} y={130} textAnchor="middle" fontSize="12" fill="#475569" transform={`rotate(-90, 20, 130)`}>MU/year</text>
+
+                                {/* Y-axis ticks */}
+                                <text x={padding - 5} y={yScale(maxMU) + 4} textAnchor="end" fontSize="10" fill="#64748b">
+                                  {formatCompact(maxMU).formatted}
+                                </text>
+                                <text x={padding - 5} y={zeroY + 4} textAnchor="end" fontSize="10" fill="#64748b">0</text>
+                                {minMU < 0 && (
+                                  <text x={padding - 5} y={yScale(minMU) + 4} textAnchor="end" fontSize="10" fill="#64748b">
+                                    {formatCompact(minMU).formatted}
+                                  </text>
+                                )}
+
+                                {/* X-axis ticks */}
+                                {[0, Math.floor(maxYear / 4), Math.floor(maxYear / 2), Math.floor(3 * maxYear / 4), maxYear].map(year => (
+                                  <text key={year} x={xScale(year)} y={250 - padding + 15} textAnchor="middle" fontSize="10" fill="#64748b">
+                                    {year}
+                                  </text>
+                                ))}
+                              </>
+                            );
+                          })()}
+                        </svg>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Finite/Indefinite Cross-cut Summary */}
+                  {(result.finite_total_MU !== undefined || result.indefinite_flow_MU_per_year !== undefined) && (
+                    <div className="card">
+                      <h3 className="section-title mb-4">Physical Time Shape</h3>
+                      <p className="text-sm text-slate-600 mb-4">
+                        Cross-cut by physical decay shape (finite duration vs indefinite half-life)
+                      </p>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        {/* Finite impacts */}
+                        {result.finite_total_MU !== undefined && result.finite_total_MU !== 0 && (
+                          <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
+                            <p className="text-xs font-semibold text-amber-800 uppercase tracking-wide mb-3">Finite Duration</p>
+                            <div className="space-y-2">
+                              <div className="flex justify-between">
+                                <span className="text-slate-600">Total MU:</span>
+                                <span className={`font-semibold ${result.finite_total_MU >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                                  {renderCompactValue(result.finite_total_MU)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-slate-600">Population:</span>
+                                <span className="font-medium text-slate-800">
+                                  {(result.finite_total_population ?? 0).toLocaleString()}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-slate-600">MU per capita:</span>
+                                <span className={`font-semibold ${(result.finite_MU_per_capita ?? 0) >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                                  {renderCompactValue(result.finite_MU_per_capita ?? 0)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-slate-600">Person-years:</span>
+                                <span className="font-medium text-slate-800">
+                                  {(result.finite_total_physical_person_years ?? 0).toLocaleString()}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-slate-600">MU per year:</span>
+                                <span className={`font-semibold ${(result.finite_MU_per_year_population ?? 0) >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                                  {renderCompactValue(result.finite_MU_per_year_population ?? 0)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        {/* Indefinite impacts */}
+                        {result.indefinite_flow_MU_per_year !== undefined && result.indefinite_flow_MU_per_year !== 0 && (
+                          <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
+                            <p className="text-xs font-semibold text-indigo-800 uppercase tracking-wide mb-3">Indefinite Half-life</p>
+                            <div className="space-y-2">
+                              <div className="flex justify-between">
+                                <span className="text-slate-600">Flow MU per year:</span>
+                                <span className={`font-semibold ${result.indefinite_flow_MU_per_year >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                                  {renderCompactValue(result.indefinite_flow_MU_per_year)}
+                                </span>
+                              </div>
+                            </div>
+                            <p className="text-xs text-slate-500 mt-3 italic">
+                              Ongoing impact with exponential decay
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Stakeholder Impact Summary */}
+                  {result.stakeholder_impacts && result.stakeholder_impacts.length > 0 && (() => {
+                    const transitionStakeholders = result.stakeholder_impacts.filter(
+                      (s) => s.transition_total_MU !== 0 || s.transition_per_capita_MU !== 0
+                    );
+                    const caseFlowStakeholders = result.stakeholder_impacts.filter(
+                      (s) => s.case_flow_MU_per_year !== 0 || s.case_flow_per_capita_MU_per_year !== 0
+                    );
+                    const structuralStakeholders = result.stakeholder_impacts.filter(
+                      (s) => s.structural_MU_per_year !== 0 || s.structural_per_capita_MU_per_year !== 0
+                    );
+
+                    const renderStakeholderSection = (
+                      title: string,
+                      list: typeof result.stakeholder_impacts,
+                      mode: "transition" | "case_flow" | "structural"
+                    ) => {
+                      const totalAbsImpact = list.reduce(
+                        (sum, s) =>
+                          sum +
+                          Math.abs(
+                            mode === "transition"
+                              ? s.transition_total_MU
+                              : mode === "case_flow"
+                              ? s.case_flow_MU_per_year
+                              : s.structural_MU_per_year
+                          ),
+                        0
+                      );
+
+                      const totalAbsPerCapita = list.reduce(
+                        (sum, s) =>
+                          sum +
+                          Math.abs(
+                            mode === "transition"
+                              ? s.transition_per_capita_MU
+                              : mode === "case_flow"
+                              ? s.case_flow_per_capita_MU_per_year
+                              : s.structural_per_capita_MU_per_year
+                          ),
+                        0
+                      );
+
+                      const sorted = [...list].sort((a, b) => {
+                        const aVal =
+                          mode === "transition"
+                            ? Math.abs(a.transition_per_capita_MU)
+                            : mode === "case_flow"
+                            ? Math.abs(a.case_flow_per_capita_MU_per_year)
+                            : Math.abs(a.structural_per_capita_MU_per_year);
+                        const bVal =
+                          mode === "transition"
+                            ? Math.abs(b.transition_per_capita_MU)
+                            : mode === "case_flow"
+                            ? Math.abs(b.case_flow_per_capita_MU_per_year)
+                            : Math.abs(b.structural_per_capita_MU_per_year);
+                        return bVal - aVal;
+                      });
+
+                      return (
+                        <div>
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-sm font-semibold text-slate-800">{title}</h4>
+                            <p className="text-xs text-slate-500">
+                              Percentages normalized within this section
+                            </p>
+                          </div>
+                          <div className="grid md:grid-cols-2 gap-3">
+                            {sorted.map((sh, idx) => {
+                              const totalValue =
+                                mode === "transition"
+                                  ? sh.transition_total_MU
+                                  : mode === "case_flow"
+                                  ? sh.case_flow_MU_per_year
+                                  : sh.structural_MU_per_year;
+                              const perCapita =
+                                mode === "transition"
+                                  ? sh.transition_per_capita_MU
+                                  : mode === "case_flow"
+                                  ? sh.case_flow_per_capita_MU_per_year
+                                  : sh.structural_per_capita_MU_per_year;
+
+                              const percentOfTotal =
+                                totalAbsImpact !== 0
+                                  ? (Math.abs(totalValue) / totalAbsImpact) * 100
+                                  : 0;
+
+                              const percentOfPerCapita =
+                                totalAbsPerCapita !== 0
+                                  ? (Math.abs(perCapita) / totalAbsPerCapita) * 100
+                                  : 0;
+
+                              return (
+                                <div key={`${mode}-${idx}`} className="border border-slate-200 rounded-lg overflow-hidden">
+                                  <div className="bg-slate-50 p-3 border-b border-slate-200">
+                                    <div className="flex items-start justify-between">
+                                      <div className="flex-1">
+                                        <p className="font-medium text-slate-900">{sh.description}</p>
+                                        <p className="text-sm text-slate-600 mt-1">{sh.count.toLocaleString()} people</p>
+                                      </div>
+                                      <div className="flex gap-4">
+                                        <div className="text-right">
+                                          <p className={`text-sm font-semibold ${totalValue >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                                            {percentOfTotal.toFixed(1)}%
+                                          </p>
+                                          <p className="text-xs text-slate-500">of {mode}</p>
                                         </div>
-                                        <div>
-                                          <label className="label-sm">Confidence</label>
-                                          <input
-                                            type="number"
-                                            min={0} max={1} step={0.01}
-                                            value={pair.confidence}
-                                            onChange={(e) => updateDecision((factors) => {
-                                              const copy = structuredClone(factors);
-                                              copy.find((f) => f.id === factor.id)!.axiom_pairs[idx].confidence = parseFloat(e.target.value);
-                                              return copy;
-                                            })}
-                                            className="input input-sm"
-                                          />
+                                        <div className="text-right">
+                                          <p className={`text-sm font-semibold ${perCapita >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                                            {percentOfPerCapita.toFixed(1)}%
+                                          </p>
+                                          <p className="text-xs text-slate-500">per capita</p>
                                         </div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {mode === "transition" ? (
+                                    <div className="p-3 bg-blue-50/30">
+                                      <div className="space-y-1 text-xs">
+                                        <div className="flex justify-between">
+                                          <span className="text-slate-600">Total MU:</span>
+                                          <span className={`font-semibold ${sh.transition_total_MU >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                                            {renderCompactValue(sh.transition_total_MU)}
+                                          </span>
+                                        </div>
+                                        {sh.transition_positive_MU !== 0 && (
+                                          <div className="flex justify-between pl-3">
+                                            <span className="text-slate-500">&rarr; Positive:</span>
+                                            <span className="font-medium text-emerald-600">
+                                              +{renderCompactValue(sh.transition_positive_MU, false)}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {sh.transition_negative_MU !== 0 && (
+                                          <div className="flex justify-between pl-3">
+                                            <span className="text-slate-500">&rarr; Negative:</span>
+                                            <span className="font-medium text-red-600">
+                                              {renderCompactValue(sh.transition_negative_MU, false)}
+                                            </span>
+                                          </div>
+                                        )}
+                                        <div className="flex justify-between">
+                                          <span className="text-slate-600">Per person:</span>
+                                          <span className={`font-semibold ${sh.transition_per_capita_MU >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                                            {renderCompactValue(sh.transition_per_capita_MU)}
+                                          </span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                          <span className="text-slate-600">Per person-year:</span>
+                                          <span className={`font-semibold ${sh.transition_per_capita_MU_per_year >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                                            {renderCompactValue(sh.transition_per_capita_MU_per_year)}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="p-3 bg-purple-50/30">
+                                      <div className="space-y-1 text-xs">
+                                        <div className="flex justify-between">
+                                          <span className="text-slate-600">Flow MU/year:</span>
+                                          <span className={`font-semibold ${(mode === "case_flow" ? sh.case_flow_MU_per_year : sh.structural_MU_per_year) >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                                  {mode === "case_flow"
+                                    ? renderCompactValue(sh.case_flow_MU_per_year)
+                                    : renderCompactValue(sh.structural_MU_per_year)}
+                                </span>
+                              </div>
+                              {(mode === "case_flow" ? sh.case_flow_positive_MU_per_year : sh.structural_positive_MU_per_year) !== 0 && (
+                              <div className="flex justify-between pl-3">
+                                <span className="text-slate-500">&rarr; Positive:</span>
+                                            <span className="font-medium text-emerald-600">
+                                              +{renderCompactValue(mode === "case_flow" ? sh.case_flow_positive_MU_per_year : sh.structural_positive_MU_per_year, false)}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {(mode === "case_flow" ? sh.case_flow_negative_MU_per_year : sh.structural_negative_MU_per_year) !== 0 && (
+                                          <div className="flex justify-between pl-3">
+                                            <span className="text-slate-500">&rarr; Negative:</span>
+                                            <span className="font-medium text-red-600">
+                                              {renderCompactValue(mode === "case_flow" ? sh.case_flow_negative_MU_per_year : sh.structural_negative_MU_per_year, false)}
+                                            </span>
+                                          </div>
+                                        )}
+                                        <div className="flex justify-between">
+                                          <span className="text-slate-600">Per person per year:</span>
+                                          <span className={`font-semibold ${(mode === "case_flow" ? sh.case_flow_per_capita_MU_per_year : sh.structural_per_capita_MU_per_year) >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                                            {mode === "case_flow"
+                                              ? renderCompactValue(sh.case_flow_per_capita_MU_per_year)
+                                              : renderCompactValue(sh.structural_per_capita_MU_per_year)}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    };
+
+                    return (
+                      <div className="card">
+                        <h3 className="section-title mb-4">Stakeholder Impact Summary</h3>
+                        <div className="space-y-6">
+                          {transitionStakeholders.length > 0 && renderStakeholderSection("Transition stakeholders", transitionStakeholders, "transition")}
+                          {caseFlowStakeholders.length > 0 && renderStakeholderSection("Steady case-flow stakeholders", caseFlowStakeholders, "case_flow")}
+                          {structuralStakeholders.length > 0 && renderStakeholderSection("Steady structural stakeholders", structuralStakeholders, "structural")}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Factor Breakdown */}
+                  <div className="card">
+                    <h3 className="section-title mb-4">Factor Breakdown</h3>
+                    <div className="space-y-6">
+                      {(() => {
+                        const renderFactorSection = (
+                          title: string,
+                          factors: typeof result.factor_scores,
+                          typeLabel: "transition" | "steady_case_flow" | "steady_structural"
+                        ) => {
+                          if (factors.length === 0) return null;
+                          const sumAbsScores = factors.reduce((sum, fs) => sum + Math.abs(fs.total_score), 0);
+                          const normalizedLabel = typeLabel.replace(/_/g, " ");
+                          return (
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                <h4 className="text-sm font-semibold text-slate-800">{title}</h4>
+                                <p className="text-xs text-slate-500">
+                                  Percentages normalized within {normalizedLabel}
+                                </p>
+                              </div>
+                              {[...factors]
+                                .sort((a, b) => Math.abs(b.total_score) - Math.abs(a.total_score))
+                                .map((fs) => {
+                                  const factor = decision.factors.find((f) => f.id === fs.factor_id);
+                                  if (!factor) return null;
+                                  const isPositive = fs.total_score > 0;
+                                  const normalizedScore = sumAbsScores > 0 ? (Math.abs(fs.total_score) / sumAbsScores) * 100 : 0;
+                                  return (
+                                    <details key={fs.factor_id} className="group border border-slate-200 rounded-lg overflow-hidden">
+                                      <summary className="flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer">
+                                        <div className="flex items-center gap-3">
+                                          <div className={`w-2 h-2 rounded-full ${isPositive ? "bg-emerald-500" : "bg-red-500"}`} />
+                                          <span className="font-medium text-slate-900">{factor.name}</span>
+                                          <span className={`badge badge-sm ${
+                                            fs.temporal_profile === "transition"
+                                              ? "badge-blue"
+                                              : fs.temporal_profile === "steady_case_flow"
+                                              ? "badge-green"
+                                              : "badge-purple"
+                                          }`}>
+                                            {fs.temporal_profile.replace(/_/g, " ")}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                          <span className={`text-sm font-semibold ${isPositive ? "text-emerald-600" : "text-red-600"}`}>
+                                            {isPositive ? "+" : ""}{normalizedScore.toFixed(1)}%
+                                          </span>
+                                          <svg className="w-4 h-4 text-slate-400 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                          </svg>
+                                        </div>
+                                      </summary>
+                                      <div className="p-4 bg-white space-y-4">
+                                        <div className="flex items-center justify-between mb-2">
+                                          <p className="text-sm text-slate-600">{factor.description}</p>
+                                          <div className="text-right ml-4 shrink-0">
+                                            <p className="text-xs text-slate-500">Raw Score</p>
+                                            <p className={`text-sm font-semibold ${isPositive ? "text-emerald-600" : "text-red-600"}`}>
+                                              {renderCompactValue(fs.total_score)} MU
+                                            </p>
+                                            <p className="text-xs text-slate-500">({normalizedScore.toFixed(1)}% of {normalizedLabel})</p>
+                                          </div>
+                                        </div>
+                                      <div className="grid grid-cols-2 gap-2 text-xs">
+                                        <div className="bg-slate-50 p-2 rounded">
+                                          <span className="text-slate-500">What changes:</span>
+                                          <p className="text-slate-700">{factor.what_changes}</p>
+                                        </div>
+                                        <div className="bg-slate-50 p-2 rounded">
+                                          <span className="text-slate-500">Who affected:</span>
+                                          <p className="text-slate-700">{factor.who_affected}</p>
+                                        </div>
+                                      </div>
+
+                                      {/* Axiom Pairs */}
+                                      <div>
+                                        <h4 className="text-sm font-semibold text-slate-700 mb-2">Axiom Parameters</h4>
+                                        {factor.axiom_pairs.map((pair, idx) => {
+                                          const axiomScore = fs.axiom_scores[pair.axiom_id] || 0;
+                                          const axiomContribution = fs.total_score !== 0
+                                            ? (Math.abs(axiomScore) / Math.abs(fs.total_score)) * 100
+                                            : 0;
+                                          return (
+                                          <div key={`${pair.axiom_id}-${idx}`} className="border border-slate-100 rounded-lg p-3 mb-2 bg-slate-50/50">
+                                            <div className="flex items-center justify-between mb-2">
+                                              <div className="text-sm font-medium text-slate-800">{pair.axiom_id.replace(/_/g, " ")}</div>
+                                              <div className="text-xs text-slate-500">
+                                                {axiomContribution.toFixed(1)}% of factor
+                                              </div>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-2">
+                                              <div>
+                                                <label className="label-sm">Intensity/yr</label>
+                                                <input
+                                                  type="number"
+                                                  min={0} max={1} step={0.01}
+                                                  value={pair.intensity_per_year}
+                                                  onChange={(e) => updateDecisionOnly((factors) => {
+                                                    const copy = structuredClone(factors);
+                                                    copy.find((f) => f.id === factor.id)!.axiom_pairs[idx].intensity_per_year = parseFloat(e.target.value);
+                                                    return copy;
+                                                  })}
+                                                  onBlur={rescoreDecision}
+                                                  className="input input-sm"
+                                                />
+                                              </div>
+                                              <div>
+                                                <label className="label-sm">Confidence</label>
+                                                <input
+                                                  type="number"
+                                                  min={0} max={1} step={0.01}
+                                                  value={pair.confidence}
+                                                  onChange={(e) => updateDecisionOnly((factors) => {
+                                                    const copy = structuredClone(factors);
+                                                    copy.find((f) => f.id === factor.id)!.axiom_pairs[idx].confidence = parseFloat(e.target.value);
+                                                    return copy;
+                                                  })}
+                                                  onBlur={rescoreDecision}
+                                                  className="input input-sm"
+                                                />
+                                              </div>
                                         <div>
                                           <label className="label-sm">Polarity</label>
                                           <input
                                             type="number"
                                             min={-1} max={1} step={0.1}
-                                            value={pair.polarity}
-                                            onChange={(e) => updateDecision((factors) => {
-                                              const copy = structuredClone(factors);
-                                              copy.find((f) => f.id === factor.id)!.axiom_pairs[idx].polarity = parseFloat(e.target.value);
-                                              return copy;
-                                            })}
-                                            className="input input-sm"
-                                          />
+                                                  value={pair.polarity}
+                                                  onChange={(e) => updateDecisionOnly((factors) => {
+                                                    const copy = structuredClone(factors);
+                                                    copy.find((f) => f.id === factor.id)!.axiom_pairs[idx].polarity = parseFloat(e.target.value);
+                                                    return copy;
+                                                  })}
+                                                  onBlur={rescoreDecision}
+                                                  className="input input-sm"
+                                                />
                                         </div>
                                         <div>
-                                          <label className="label-sm">Time type</label>
+                                          <label className="label-sm">Temporal profile</label>
                                           <select
-                                            value={pair.time_type}
-                                            onChange={(e) => updateDecision((factors) => {
-                                              const copy = structuredClone(factors);
-                                              copy.find((f) => f.id === factor.id)!.axiom_pairs[idx].time_type = e.target.value as "finite" | "indefinite";
-                                              return copy;
-                                            })}
+                                            value={factor.temporal_profile}
+                                            onChange={(e) => {
+                                              updateDecisionOnly((factors) => {
+                                                const copy = structuredClone(factors);
+                                                copy.find((f) => f.id === factor.id)!.temporal_profile = e.target.value as "transition" | "steady_case_flow" | "steady_structural";
+                                                return copy;
+                                              });
+                                              rescoreDecision();
+                                            }}
                                             className="select text-xs py-1.5"
                                           >
-                                            <option value="finite">finite</option>
-                                            <option value="indefinite">indefinite</option>
+                                            <option value="transition">transition</option>
+                                            <option value="steady_case_flow">steady_case_flow</option>
+                                            <option value="steady_structural">steady_structural</option>
                                           </select>
                                         </div>
-                                        {pair.time_type === "finite" ? (
-                                          <div>
-                                            <label className="label-sm">Duration (yrs)</label>
-                                            <input
-                                              type="number"
-                                              min={0} step={0.1}
-                                              value={pair.duration_years ?? 0}
-                                              onChange={(e) => updateDecision((factors) => {
-                                                const copy = structuredClone(factors);
-                                                const p = copy.find((f) => f.id === factor.id)!.axiom_pairs[idx];
-                                                p.duration_years = parseFloat(e.target.value);
-                                                p.physical_half_life_years = null;
-                                                return copy;
-                                              })}
-                                              className="input input-sm"
-                                            />
-                                          </div>
-                                        ) : (
-                                          <div>
-                                            <label className="label-sm">Phys. half-life</label>
-                                            <input
-                                              type="number"
-                                              min={0} step={0.1}
-                                              value={pair.physical_half_life_years ?? 0}
-                                              onChange={(e) => updateDecision((factors) => {
-                                                const copy = structuredClone(factors);
-                                                const p = copy.find((f) => f.id === factor.id)!.axiom_pairs[idx];
-                                                p.physical_half_life_years = parseFloat(e.target.value);
-                                                p.duration_years = null;
-                                                return copy;
-                                              })}
-                                              className="input input-sm"
-                                            />
-                                          </div>
+                                        {factor.temporal_profile === "transition" && (
+                                          <>
+                                            <div>
+                                              <label className="label-sm">Time type</label>
+                                              <select
+                                                value={pair.time_type}
+                                                onChange={(e) => {
+                                                  updateDecisionOnly((factors) => {
+                                                    const copy = structuredClone(factors);
+                                                    copy.find((f) => f.id === factor.id)!.axiom_pairs[idx].time_type = e.target.value as "finite" | "indefinite";
+                                                    return copy;
+                                                  });
+                                                  rescoreDecision();
+                                                }}
+                                                className="select text-xs py-1.5"
+                                              >
+                                                <option value="finite">finite</option>
+                                                <option value="indefinite">indefinite</option>
+                                              </select>
+                                            </div>
+                                            {pair.time_type === "finite" ? (
+                                              <div>
+                                                <label className="label-sm">Duration (yrs)</label>
+                                                <input
+                                                  type="number"
+                                                  min={0} step={0.1}
+                                                  value={pair.duration_years ?? 0}
+                                                  onChange={(e) => updateDecisionOnly((factors) => {
+                                                    const copy = structuredClone(factors);
+                                                    const p = copy.find((f) => f.id === factor.id)!.axiom_pairs[idx];
+                                                    p.duration_years = parseFloat(e.target.value);
+                                                    p.physical_half_life_years = null;
+                                                    return copy;
+                                                  })}
+                                                  onBlur={rescoreDecision}
+                                                  className="input input-sm"
+                                                />
+                                              </div>
+                                            ) : (
+                                              <div>
+                                                <label className="label-sm">Phys. half-life</label>
+                                                <input
+                                                  type="number"
+                                                  min={0} step={0.1}
+                                                  value={pair.physical_half_life_years ?? 0}
+                                                  onChange={(e) => updateDecisionOnly((factors) => {
+                                                    const copy = structuredClone(factors);
+                                                    const p = copy.find((f) => f.id === factor.id)!.axiom_pairs[idx];
+                                                    p.physical_half_life_years = parseFloat(e.target.value);
+                                                    p.duration_years = null;
+                                                    return copy;
+                                                  })}
+                                                  onBlur={rescoreDecision}
+                                                  className="input input-sm"
+                                                />
+                                              </div>
+                                            )}
+                                          </>
                                         )}
+                                            </div>
+                                            {/* Rationale */}
+                                            {pair.rationale && (
+                                              <p className="text-xs text-slate-600 mt-2 italic border-t border-slate-200 pt-2">
+                                                {pair.rationale}
+                                              </p>
+                                            )}
+                                          </div>
+                                          );
+                                        })}
+                                      </div>
+
+                                      {/* Scale Groups */}
+                                      <div>
+                                        <h4 className="text-sm font-semibold text-slate-700 mb-2">Scale Groups</h4>
+                                        {factor.scale_groups.map((sg, sgIdx) => (
+                                          <div key={`${sg.social_class_id}-${sgIdx}`} className="flex items-center gap-3 bg-slate-50 p-2 rounded-lg mb-2">
+                                            <span className="badge badge-gray">{sg.social_class_id}</span>
+                                            <input
+                                              type="number"
+                                              min={0} step={1}
+                                              value={sg.count}
+                                              onChange={(e) => updateDecisionOnly((factors) => {
+                                                const copy = structuredClone(factors);
+                                                copy.find((f) => f.id === factor.id)!.scale_groups[sgIdx].count = parseInt(e.target.value, 10);
+                                                return copy;
+                                              })}
+                                              onBlur={rescoreDecision}
+                                              className="input input-sm w-24"
+                                            />
+                                            <span className="text-xs text-slate-600 flex-1">{sg.description}</span>
+                                          </div>
+                                        ))}
                                       </div>
                                     </div>
-                                  ))}
-                                </div>
-
-                                {/* Scale Groups */}
-                                <div>
-                                  <h4 className="text-sm font-semibold text-slate-700 mb-2">Scale Groups</h4>
-                                  {factor.scale_groups.map((sg, sgIdx) => (
-                                    <div key={`${sg.group_type}-${sgIdx}`} className="flex items-center gap-3 bg-slate-50 p-2 rounded-lg mb-2">
-                                      <span className="badge badge-gray">{sg.group_type}</span>
-                                      <input
-                                        type="number"
-                                        min={0} step={1}
-                                        value={sg.count}
-                                        onChange={(e) => updateDecision((factors) => {
-                                          const copy = structuredClone(factors);
-                                          copy.find((f) => f.id === factor.id)!.scale_groups[sgIdx].count = parseInt(e.target.value, 10);
-                                          return copy;
-                                        })}
-                                        className="input input-sm w-24"
-                                      />
-                                      <span className="text-xs text-slate-600 flex-1">{sg.description}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            </details>
+                                  </details>
+                                );
+                              })}
+                            </div>
                           );
-                        })}
+                        };
+
+                        const transitionFactors = result.factor_scores.filter((fs) => fs.temporal_profile === "transition");
+                        const caseFlowFactors = result.factor_scores.filter((fs) => fs.temporal_profile === "steady_case_flow");
+                        const structuralFactors = result.factor_scores.filter((fs) => fs.temporal_profile === "steady_structural");
+
+                        return (
+                          <>
+                            {renderFactorSection("Transition factors", transitionFactors, "transition")}
+                            {renderFactorSection("Steady case-flow factors", caseFlowFactors, "steady_case_flow")}
+                            {renderFactorSection("Steady structural factors", structuralFactors, "steady_structural")}
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
 
@@ -517,7 +1250,6 @@ export default function Home() {
                 </div>
               )}
             </div>
-          </div>
         )}
 
         {/* Calibration Tab */}
@@ -525,8 +1257,8 @@ export default function Home() {
           <div className="grid lg:grid-cols-3 gap-6">
             {/* Axiom Weights */}
             <div className="card lg:col-span-2">
-              <h2 className="section-title mb-1">Axiom Weights</h2>
-              <p className="section-subtitle mb-4">Set your priority for each moral dimension (0-1)</p>
+              <h2 className="section-title mb-1">Axiom Weights (MU)</h2>
+              <p className="section-subtitle mb-4">Moral Units per person-year at full intensity</p>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <tbody>
@@ -539,7 +1271,7 @@ export default function Home() {
                         <td className="py-3 w-24">
                           <input
                             type="number"
-                            min={0} max={1} step={0.01}
+                            min={0} step={1}
                             value={profile.axiomWeights[ax.id] ?? ax.default_weight}
                             onChange={(e) => updateAxiomWeight(ax.id, parseFloat(e.target.value))}
                             className="input input-sm w-full text-right"
@@ -555,30 +1287,44 @@ export default function Home() {
             {/* Social Distance & Time */}
             <div className="space-y-6">
               <div className="card">
-                <h2 className="section-title mb-1">Social Distance</h2>
-                <p className="section-subtitle mb-4">Weight by relationship proximity</p>
+                <div className="flex items-center justify-between mb-1">
+                  <h2 className="section-title">Social Classes</h2>
+                  <button onClick={addSocialClass} className="btn btn-ghost btn-sm text-xs">
+                    + Add Class
+                  </button>
+                </div>
+                <p className="section-subtitle mb-4">Editable relationship categories and weights</p>
                 <table className="w-full text-sm">
                   <tbody>
-                    {[
-                      { id: "self", label: "Self", desc: "You" },
-                      { id: "inner_circle", label: "Inner Circle", desc: "Family, close friends" },
-                      { id: "tribe", label: "Tribe", desc: "Coworkers, neighbors" },
-                      { id: "citizens", label: "Citizens", desc: "Strangers, public" },
-                      { id: "outsiders", label: "Outsiders", desc: "Foreign, distant others" },
-                    ].map((item) => (
-                      <tr key={item.id} className="border-b border-slate-100 last:border-0">
+                    {profile.socialClasses.map((sc) => (
+                      <tr key={sc.id} className="border-b border-slate-100 last:border-0">
                         <td className="py-2 pr-2">
-                          <div className="font-medium text-slate-900">{item.label}</div>
-                          <div className="text-xs text-slate-500">{item.desc}</div>
+                          <input
+                            type="text"
+                            value={sc.label}
+                            onChange={(e) => updateSocialClass(sc.id, 'label', e.target.value)}
+                            className="input input-sm w-full"
+                            placeholder="Label"
+                          />
+                          <div className="text-xs text-slate-500 mt-1">ID: {sc.id}</div>
                         </td>
-                        <td className="py-2 w-16">
+                        <td className="py-2 w-20">
                           <input
                             type="number"
-                            min={0} max={1} step={0.01}
-                            value={profile.socialWeights[item.id] ?? 0.5}
-                            onChange={(e) => updateSocialWeight(item.id, parseFloat(e.target.value))}
+                            min={0} step={0.1}
+                            value={sc.weight}
+                            onChange={(e) => updateSocialClass(sc.id, 'weight', parseFloat(e.target.value))}
                             className="input input-sm w-full text-right"
                           />
+                        </td>
+                        <td className="py-2 w-8">
+                          <button
+                            onClick={() => deleteSocialClass(sc.id)}
+                            className="text-slate-400 hover:text-red-500"
+                            title="Delete"
+                          >
+                            ×
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -587,23 +1333,96 @@ export default function Home() {
               </div>
 
               <div className="card">
-                <h2 className="section-title mb-1">Time Discounting</h2>
-                <p className="section-subtitle mb-3">How much future impacts matter</p>
-                <div>
-                  <label className="label">Moral Half-Life (years)</label>
-                  <input
-                    type="number"
-                    min={1} max={200} step={1}
-                    value={profile.moralHalfLifeYears}
-                    onChange={(e) => updateMoralHalfLife(parseFloat(e.target.value))}
-                    className="input"
-                  />
-                  <p className="text-xs text-slate-500 mt-2">
-                    Years until future impacts count 50%
-                  </p>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Lower = near-term focus; Higher = long-term focus
-                  </p>
+                <h2 className="section-title mb-1">Time Stance</h2>
+                <p className="section-subtitle mb-3">How to value impacts over time</p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="label-sm">Time Model</label>
+                    <select
+                      value={profile.timeStance.model}
+                      onChange={(e) => updateTimeStance({ model: e.target.value as any })}
+                      className="input w-full"
+                    >
+                      <option value="linear">Linear (no discounting)</option>
+                      <option value="half_life">Half-life (exponential decay)</option>
+                      <option value="bucketed">Bucketed (short/medium/long-term)</option>
+                    </select>
+                  </div>
+
+                  {profile.timeStance.model === "half_life" && (
+                    <div>
+                      <label className="label-sm">Moral Half-Life (years)</label>
+                      <input
+                        type="number"
+                        min={1} max={200} step={1}
+                        value={profile.timeStance.moral_half_life_years || 30}
+                        onChange={(e) => updateTimeStance({ moral_half_life_years: parseFloat(e.target.value) })}
+                        className="input w-full"
+                      />
+                      <p className="text-xs text-slate-500 mt-1">
+                        Years until future impacts count 50%
+                      </p>
+                    </div>
+                  )}
+
+                  {profile.timeStance.model === "bucketed" && (
+                    <>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="label-sm">Short term (years)</label>
+                          <input
+                            type="number"
+                            min={1} step={1}
+                            value={profile.timeStance.short_term_years || 5}
+                            onChange={(e) => updateTimeStance({ short_term_years: parseFloat(e.target.value) })}
+                            className="input input-sm w-full"
+                          />
+                        </div>
+                        <div>
+                          <label className="label-sm">Short term weight</label>
+                          <input
+                            type="number"
+                            min={0} step={0.1}
+                            value={profile.timeStance.short_term_weight || 1.0}
+                            onChange={(e) => updateTimeStance({ short_term_weight: parseFloat(e.target.value) })}
+                            className="input input-sm w-full"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="label-sm">Medium term (years)</label>
+                          <input
+                            type="number"
+                            min={1} step={1}
+                            value={profile.timeStance.medium_term_years || 30}
+                            onChange={(e) => updateTimeStance({ medium_term_years: parseFloat(e.target.value) })}
+                            className="input input-sm w-full"
+                          />
+                        </div>
+                        <div>
+                          <label className="label-sm">Medium term weight</label>
+                          <input
+                            type="number"
+                            min={0} step={0.1}
+                            value={profile.timeStance.medium_term_weight || 0.5}
+                            onChange={(e) => updateTimeStance({ medium_term_weight: parseFloat(e.target.value) })}
+                            className="input input-sm w-full"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="label-sm">Long term weight</label>
+                        <input
+                          type="number"
+                          min={0} step={0.1}
+                          value={profile.timeStance.long_term_weight || 0.2}
+                          onChange={(e) => updateTimeStance({ long_term_weight: parseFloat(e.target.value) })}
+                          className="input w-full"
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -776,6 +1595,39 @@ export default function Home() {
               <button onClick={() => setShowPrompt(false)} className="btn btn-ghost">Close</button>
               <button onClick={() => { copyPrompt(); setShowPrompt(false); }} className="btn btn-primary">
                 Copy Prompt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Input Modal */}
+      {showInputModal && (
+        <div className="modal-backdrop" onClick={() => setShowInputModal(false)}>
+          <div className="modal-content w-full max-w-4xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-slate-200">
+              <div>
+                <h3 className="text-lg font-semibold">Decision JSON</h3>
+                <p className="text-sm text-slate-600 mt-1">Paste or edit the decision JSON</p>
+              </div>
+              <button onClick={() => setShowInputModal(false)} className="btn btn-ghost btn-sm">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-4 flex-1 overflow-auto">
+              <textarea
+                className="textarea h-96 scrollbar-thin"
+                value={inputJson}
+                onChange={(e) => setInputJson(e.target.value)}
+                placeholder="Paste decision JSON here..."
+                spellCheck={false}
+              />
+            </div>
+            <div className="flex justify-end p-4 border-t border-slate-200 bg-slate-50">
+              <button onClick={() => setShowInputModal(false)} className="btn btn-primary">
+                Close
               </button>
             </div>
           </div>

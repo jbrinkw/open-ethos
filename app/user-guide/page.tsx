@@ -214,9 +214,9 @@ export default function UserGuide() {
               <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
                 <h4 className="font-semibold text-slate-900">T<sub>eff</sub> — Effective Duration (years)</h4>
                 <p className="text-slate-600 mt-1">
-                  The time-discounted duration of the impact. For finite effects, this accounts for moral
-                  discounting over the duration. For indefinite effects, it integrates over an infinite horizon
-                  using both moral and physical half-lives. See the Time Integration section for details.
+                  The time-discounted duration of the impact. For <strong>transition</strong> profiles, T<sub>eff</sub> comes from the time stance and the physical time_type.
+                  For <strong>steady</strong> profiles (case_flow / structural), impacts are modeled as per-year flows (T<sub>eff</sub> = 1) because they recur each policy-year.
+                  See the Time Integration section for details.
                 </p>
               </div>
 
@@ -444,42 +444,30 @@ export default function UserGuide() {
               Good for longtermist perspectives.</li>
             </ul>
 
-            <h3>Finite Effects</h3>
-            <p>
-              For effects with a known duration (e.g., &quot;3 years of treatment&quot;), use <code>time_type: &quot;finite&quot;</code>
-              and provide <code>duration_years</code>. The engine calculates:
-            </p>
-            <div className="bg-slate-900 text-slate-100 p-4 rounded-lg font-mono text-sm my-4 overflow-x-auto">
-              T_eff = (1 - exp(-λ_m × duration)) / λ_m<br/>
-              where λ_m = ln(2) / moral_half_life
-            </div>
-            <p>
-              This means short durations contribute almost linearly, while very long durations are discounted.
-            </p>
 
-            <h3>Indefinite / Structural Effects</h3>
+            <h3>Temporal Profiles</h3>
+            <ul className="list-disc pl-6 space-y-1 text-slate-700">
+              <li><strong>transition:</strong> one-time/finite blob around the change. Uses T<sub>eff</sub> from the time stance + physical time_type.</li>
+              <li><strong>steady_case_flow:</strong> new cohorts each policy-year. Treated as per-year flow (T<sub>eff</sub> = 1).</li>
+              <li><strong>steady_structural:</strong> ambient background per policy-year. Treated as per-year flow (T<sub>eff</sub> = 1).</li>
+            </ul>
+
+            <h3>Physical Time Shape (time_type)</h3>
             <p>
-              For effects that persist indefinitely but decay over time (e.g., &quot;institutional precedent&quot;), use
-              <code>time_type: &quot;indefinite&quot;</code> and provide <code>physical_half_life_years</code>. This represents
-              how quickly the effect naturally decays independent of moral discounting.
+              time_type describes the physical persistence of each axiom_pair:
             </p>
-            <div className="bg-slate-900 text-slate-100 p-4 rounded-lg font-mono text-sm my-4 overflow-x-auto">
-              T_eff = 1 / (λ_m + λ_p)<br/>
-              where λ_p = ln(2) / physical_half_life
-            </div>
-            <p>
-              This integrates over infinite time, accounting for both moral discounting and physical decay.
-            </p>
+            <ul className="list-disc pl-6 space-y-1 text-slate-700">
+              <li><strong>finite:</strong> provide <code>duration_years</code>. T_eff = (1 - exp(-λ<sub>m</sub> × duration)) / λ<sub>m</sub>.</li>
+              <li><strong>indefinite:</strong> provide <code>physical_half_life_years</code>. For transition profiles, T_eff = 1 / (λ<sub>m</sub> + λ<sub>p</sub>); for steady profiles, flows remain per-year.</li>
+            </ul>
 
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mt-4">
               <h4 className="font-semibold text-amber-800 mb-2">Example</h4>
               <p className="text-amber-700 text-sm">
-                A policy change might have a physical half-life of 20 years (norms and institutions decay).
-                With a 30-year moral half-life, the effective duration would be approximately 12 years
-                (1 / (ln(2)/30 + ln(2)/20) ≈ 12).
+                A structural factor with physical half-life 20y and moral half-life 30y would have T_eff ≈ 12 years if modeled as a transition; if marked steady_structural, it is reported as MU/year.
               </p>
             </div>
-          </div>
+</div>
         </section>
 
         {/* Social Distance Section */}
@@ -569,6 +557,7 @@ export default function UserGuide() {
       "who_affected": "Who is impacted by this factor",
       "how_much": "Qualitative description of magnitude",
       "duration": "How long the effect lasts",
+      "temporal_profile": "transition",
       "axiom_pairs": [
         {
           "axiom_id": "life_health",
@@ -583,7 +572,7 @@ export default function UserGuide() {
       ],
       "scale_groups": [
         {
-          "group_type": "citizens",
+          "social_class_id": "citizens",
           "count": 10000,
           "description": "Population affected"
         }
@@ -597,13 +586,12 @@ export default function UserGuide() {
             <ul>
               <li><strong>factors:</strong> Array of distinct considerations. Include factors on BOTH sides
               of the decision (pro and con).</li>
+              <li><strong>temporal_profile:</strong> "transition", "steady_case_flow", or "steady_structural". Transition uses T<sub>eff</sub>; steady profiles are per-year flows.</li>
               <li><strong>axiom_pairs:</strong> Each factor can affect multiple axioms. For instance, a factor
               might impact both health and autonomy.</li>
-              <li><strong>time_type:</strong> Either &quot;finite&quot; (with duration_years) or &quot;indefinite&quot; (with
-              physical_half_life_years).</li>
+              <li><strong>time_type:</strong> Physical shape per axiom_pair: "finite" (with duration_years) or "indefinite" (with physical_half_life_years).</li>
               <li><strong>polarity:</strong> Negative = pushes toward NO; Positive = pushes toward YES.</li>
-              <li><strong>scale_groups:</strong> Who is affected and how many. Use appropriate group_type
-              (self, inner_circle, tribe, citizens).</li>
+              <li><strong>scale_groups:</strong> Who is affected and how many. Use social_class_id (self, inner_circle, tribe, citizens, etc.).</li>
             </ul>
 
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mt-4">
