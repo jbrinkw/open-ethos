@@ -40,6 +40,7 @@ export interface SocialClass {
   id: string;
   label: string;
   weight: number; // relative weight, can be any positive number
+  note?: string; // optional note explaining this social class
 }
 
 export interface FactorAxiomPair {

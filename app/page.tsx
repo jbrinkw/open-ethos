@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Decision, DecisionResult, Factor } from "../lib/models";
-import { EXAMPLE_JSON } from "../lib/example";
+import { EXAMPLE_ABORTION, EXAMPLE_FACIAL_RECOGNITION, EXAMPLE_VACCINATION } from "../lib/example";
 import { buildPrompt } from "../lib/prompt";
 import { scoreDecision, formatScoreBreakdown } from "../lib/scoring";
 import { validateDecision } from "../lib/validate";
@@ -12,7 +12,7 @@ import {
   loadProfileFromCookie,
   saveProfileToCookie,
 } from "../lib/profile";
-import { DEFAULT_AXIOMS } from "../lib/constants";
+import { DEFAULT_AXIOMS, DEFAULT_AXIOM_WEIGHTS, DEFAULT_SOCIAL_CLASSES } from "../lib/constants";
 
 const compactFormatter = new Intl.NumberFormat("en", {
   notation: "compact",
@@ -55,9 +55,20 @@ const DOMAIN_EXAMPLES = [
   { domain: "Fairness/Trust", examples: "0.1 slight unfairness → 0.5 systemic bias → 1.0 complete breakdown" },
 ];
 
+type ExampleKey = "vaccination" | "facial_recognition" | "abortion";
+
+const EXAMPLE_ORDER: ExampleKey[] = ["vaccination", "facial_recognition", "abortion"];
+
+const EXAMPLES: Record<ExampleKey, { label: string; json: string }> = {
+  vaccination: { label: "Mandatory Vaccination", json: EXAMPLE_VACCINATION },
+  facial_recognition: { label: "Facial Recognition Ban", json: EXAMPLE_FACIAL_RECOGNITION },
+  abortion: { label: "Abortion Access", json: EXAMPLE_ABORTION },
+};
+
 export default function Home() {
   const [promptText] = useState<string>(buildPrompt);
-  const [inputJson, setInputJson] = useState<string>(EXAMPLE_JSON);
+  const [activeExample, setActiveExample] = useState<ExampleKey>("vaccination");
+  const [inputJson, setInputJson] = useState<string>(EXAMPLE_VACCINATION);
   const [result, setResult] = useState<DecisionResult | null>(null);
   const [decision, setDecision] = useState<Decision | null>(null);
   const [status, setStatus] = useState<Status>({ type: "idle", message: "" });
@@ -71,6 +82,60 @@ export default function Home() {
   useEffect(() => {
     setProfile(loadProfileFromCookie());
   }, []);
+
+  // Auto-rescore when profile or decision changes
+  useEffect(() => {
+    if (decision) {
+      const rescored = scoreDecision(
+        decision,
+        profile.axiomWeights,
+        profile.socialClasses,
+        profile.timeStance,
+        profile.customAnchors || [],
+        profile.muCalibration
+      );
+      setResult(rescored);
+    }
+  }, [profile, decision]);
+
+  // Helper to score a given JSON string with a given profile
+  const scoreJson = useCallback((json: string, p: Profile) => {
+    try {
+      const parsed: Decision = JSON.parse(json);
+      const errors = validateDecision(parsed);
+      if (errors.length) {
+        setStatus({ type: "error", message: errors.join("; ") });
+        return;
+      }
+      const scored = scoreDecision(
+        parsed,
+        p.axiomWeights,
+        p.socialClasses,
+        p.timeStance,
+        p.customAnchors || [],
+        p.muCalibration
+      );
+      setDecision(parsed);
+      setResult(scored);
+      setStatus({ type: "success", message: "Scored successfully" });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Invalid JSON";
+      setStatus({ type: "error", message });
+    }
+  }, []);
+
+  // Auto-score on initial load
+  useEffect(() => {
+    const loadedProfile = loadProfileFromCookie();
+    scoreJson(EXAMPLE_VACCINATION, loadedProfile);
+  }, [scoreJson]);
+
+  const switchExample = useCallback((key: ExampleKey) => {
+    setActiveExample(key);
+    const json = EXAMPLES[key].json;
+    setInputJson(json);
+    scoreJson(json, profile);
+  }, [profile, scoreJson]);
 
   const persistProfile = useCallback((p: Profile) => {
     setProfile(p);
@@ -98,29 +163,8 @@ export default function Home() {
 
   const runScore = useCallback(() => {
     setStatus({ type: "idle", message: "" });
-    try {
-      const parsed: Decision = JSON.parse(inputJson);
-      const errors = validateDecision(parsed);
-      if (errors.length) {
-        setStatus({ type: "error", message: errors.join("; ") });
-        return;
-      }
-      const scored = scoreDecision(
-        parsed,
-        profile.axiomWeights,
-        profile.socialClasses,
-        profile.timeStance,
-        profile.customAnchors || [],
-        profile.muCalibration
-      );
-      setDecision(parsed);
-      setResult(scored);
-      setStatus({ type: "success", message: "Scored successfully" });
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Invalid JSON";
-      setStatus({ type: "error", message });
-    }
-  }, [inputJson, profile]);
+    scoreJson(inputJson, profile);
+  }, [inputJson, profile, scoreJson]);
 
   const breakdown = useMemo(() => {
     if (!result || !decision) return "";
@@ -217,6 +261,58 @@ export default function Home() {
     return "badge-gray";
   };
 
+  // Find all factors that contribute to a stakeholder (by matching scale_groups)
+  const getContributingFactors = (
+    stakeholder: import("../lib/models").StakeholderImpact,
+    mode: "transition" | "case_flow" | "structural"
+  ) => {
+    if (!decision || !result) return [];
+    
+    const contributing: Array<{
+      factor: Factor;
+      factorScore: import("../lib/models").FactorScore;
+      contribution: number;
+    }> = [];
+
+    for (const factorScore of result.factor_scores) {
+      // Only include factors that match the temporal mode
+      const profileMatch = 
+        (mode === "transition" && factorScore.temporal_profile === "transition") ||
+        (mode === "case_flow" && factorScore.temporal_profile === "steady_case_flow") ||
+        (mode === "structural" && factorScore.temporal_profile === "steady_structural");
+      
+      if (!profileMatch) continue;
+
+      const factor = decision.factors.find((f) => f.id === factorScore.factor_id);
+      if (!factor) continue;
+
+      // Check if this factor's scale_groups match the stakeholder
+      const matchingGroup = factor.scale_groups.find(
+        (sg) =>
+          sg.social_class_id === stakeholder.social_class_id &&
+          sg.count === stakeholder.count &&
+          (sg.description ?? "") === stakeholder.description
+      );
+
+      if (matchingGroup) {
+        // Calculate approximate contribution from this factor to this stakeholder
+        const totalScale = factor.scale_groups.reduce((sum, sg) => {
+          const weight = profile.socialClasses.find((sc) => sc.id === sg.social_class_id)?.weight ?? 0.3;
+          return sum + sg.count * weight;
+        }, 0);
+        const groupWeight = profile.socialClasses.find((sc) => sc.id === matchingGroup.social_class_id)?.weight ?? 0.3;
+        const groupScale = matchingGroup.count * groupWeight;
+        const groupShare = totalScale > 0 ? groupScale / totalScale : 0;
+        const contribution = factorScore.total_score * groupShare;
+
+        contributing.push({ factor, factorScore, contribution });
+      }
+    }
+
+    // Sort by absolute contribution
+    return contributing.sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution));
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
@@ -244,6 +340,26 @@ export default function Home() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Example Selector */}
+        <div className="mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-slate-600 mr-2">Example:</span>
+            {EXAMPLE_ORDER.map((key) => (
+              <button
+                key={key}
+                onClick={() => switchExample(key)}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                  activeExample === key
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
+                }`}
+              >
+                {EXAMPLES[key].label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Tab Navigation and Action Buttons */}
         <div className="flex items-center justify-between gap-3 mb-6">
           <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg">
@@ -670,73 +786,6 @@ export default function Home() {
                     </div>
                   )}
 
-                  {/* Finite/Indefinite Cross-cut Summary */}
-                  {(result.finite_total_MU !== undefined || result.indefinite_flow_MU_per_year !== undefined) && (
-                    <div className="card">
-                      <h3 className="section-title mb-4">Physical Time Shape</h3>
-                      <p className="text-sm text-slate-600 mb-4">
-                        Cross-cut by physical decay shape (finite duration vs indefinite half-life)
-                      </p>
-                      <div className="grid md:grid-cols-2 gap-4">
-                        {/* Finite impacts */}
-                        {result.finite_total_MU !== undefined && result.finite_total_MU !== 0 && (
-                          <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
-                            <p className="text-xs font-semibold text-amber-800 uppercase tracking-wide mb-3">Finite Duration</p>
-                            <div className="space-y-2">
-                              <div className="flex justify-between">
-                                <span className="text-slate-600">Total MU:</span>
-                                <span className={`font-semibold ${result.finite_total_MU >= 0 ? "text-emerald-700" : "text-red-700"}`}>
-                                  {renderCompactValue(result.finite_total_MU)}
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-slate-600">Population:</span>
-                                <span className="font-medium text-slate-800">
-                                  {(result.finite_total_population ?? 0).toLocaleString()}
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-slate-600">MU per capita:</span>
-                                <span className={`font-semibold ${(result.finite_MU_per_capita ?? 0) >= 0 ? "text-emerald-700" : "text-red-700"}`}>
-                                  {renderCompactValue(result.finite_MU_per_capita ?? 0)}
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-slate-600">Person-years:</span>
-                                <span className="font-medium text-slate-800">
-                                  {(result.finite_total_physical_person_years ?? 0).toLocaleString()}
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-slate-600">MU per year:</span>
-                                <span className={`font-semibold ${(result.finite_MU_per_year_population ?? 0) >= 0 ? "text-emerald-700" : "text-red-700"}`}>
-                                  {renderCompactValue(result.finite_MU_per_year_population ?? 0)}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                        {/* Indefinite impacts */}
-                        {result.indefinite_flow_MU_per_year !== undefined && result.indefinite_flow_MU_per_year !== 0 && (
-                          <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
-                            <p className="text-xs font-semibold text-indigo-800 uppercase tracking-wide mb-3">Indefinite Half-life</p>
-                            <div className="space-y-2">
-                              <div className="flex justify-between">
-                                <span className="text-slate-600">Flow MU per year:</span>
-                                <span className={`font-semibold ${result.indefinite_flow_MU_per_year >= 0 ? "text-emerald-700" : "text-red-700"}`}>
-                                  {renderCompactValue(result.indefinite_flow_MU_per_year)}
-                                </span>
-                              </div>
-                            </div>
-                            <p className="text-xs text-slate-500 mt-3 italic">
-                              Ongoing impact with exponential decay
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
                   {/* Stakeholder Impact Summary */}
                   {result.stakeholder_impacts && result.stakeholder_impacts.length > 0 && (() => {
                     const transitionStakeholders = result.stakeholder_impacts.filter(
@@ -783,17 +832,18 @@ export default function Home() {
                       const sorted = [...list].sort((a, b) => {
                         const aVal =
                           mode === "transition"
-                            ? Math.abs(a.transition_per_capita_MU)
+                            ? a.transition_total_MU
                             : mode === "case_flow"
-                            ? Math.abs(a.case_flow_per_capita_MU_per_year)
-                            : Math.abs(a.structural_per_capita_MU_per_year);
+                            ? a.case_flow_MU_per_year
+                            : a.structural_MU_per_year;
                         const bVal =
                           mode === "transition"
-                            ? Math.abs(b.transition_per_capita_MU)
+                            ? b.transition_total_MU
                             : mode === "case_flow"
-                            ? Math.abs(b.case_flow_per_capita_MU_per_year)
-                            : Math.abs(b.structural_per_capita_MU_per_year);
-                        return bVal - aVal;
+                            ? b.case_flow_MU_per_year
+                            : b.structural_MU_per_year;
+                        // Sort by absolute magnitude - biggest first
+                        return Math.abs(bVal) - Math.abs(aVal);
                       });
 
                       return (
@@ -829,109 +879,140 @@ export default function Home() {
                                   ? (Math.abs(perCapita) / totalAbsPerCapita) * 100
                                   : 0;
 
-                              return (
-                                <div key={`${mode}-${idx}`} className="border border-slate-200 rounded-lg overflow-hidden">
-                                  <div className="bg-slate-50 p-3 border-b border-slate-200">
-                                    <div className="flex items-start justify-between">
-                                      <div className="flex-1">
-                                        <p className="font-medium text-slate-900">{sh.description}</p>
-                                        <p className="text-sm text-slate-600 mt-1">{sh.count.toLocaleString()} people</p>
-                                      </div>
-                                      <div className="flex gap-4">
-                                        <div className="text-right">
-                                          <p className={`text-sm font-semibold ${totalValue >= 0 ? "text-emerald-700" : "text-red-700"}`}>
-                                            {percentOfTotal.toFixed(1)}%
-                                          </p>
-                                          <p className="text-xs text-slate-500">of {mode}</p>
-                                        </div>
-                                        <div className="text-right">
-                                          <p className={`text-sm font-semibold ${perCapita >= 0 ? "text-emerald-700" : "text-red-700"}`}>
-                                            {percentOfPerCapita.toFixed(1)}%
-                                          </p>
-                                          <p className="text-xs text-slate-500">per capita</p>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
+                              const contributing = getContributingFactors(sh, mode);
+                              const totalAbsContribution = contributing.reduce((sum, c) => sum + Math.abs(c.contribution), 0);
 
-                                  {mode === "transition" ? (
-                                    <div className="p-3 bg-blue-50/30">
-                                      <div className="space-y-1 text-xs">
-                                        <div className="flex justify-between">
-                                          <span className="text-slate-600">Total MU:</span>
-                                          <span className={`font-semibold ${sh.transition_total_MU >= 0 ? "text-emerald-700" : "text-red-700"}`}>
-                                            {renderCompactValue(sh.transition_total_MU)}
-                                          </span>
-                                        </div>
-                                        {sh.transition_positive_MU !== 0 && (
-                                          <div className="flex justify-between pl-3">
-                                            <span className="text-slate-500">&rarr; Positive:</span>
-                                            <span className="font-medium text-emerald-600">
-                                              +{renderCompactValue(sh.transition_positive_MU, false)}
-                                            </span>
+                              return (
+                                <details 
+                                  key={`${mode}-${idx}`} 
+                                  className="group border border-slate-200 rounded-lg overflow-hidden"
+                                >
+                                  <summary className="cursor-pointer hover:bg-slate-50 transition-colors list-none">
+                                    <div className="bg-slate-50 p-3">
+                                      <div className="flex items-start justify-between">
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-2">
+                                            <svg className="w-4 h-4 text-slate-400 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                            </svg>
+                                            <p className="font-medium text-slate-900">{sh.description}</p>
                                           </div>
-                                        )}
-                                        {sh.transition_negative_MU !== 0 && (
-                                          <div className="flex justify-between pl-3">
-                                            <span className="text-slate-500">&rarr; Negative:</span>
-                                            <span className="font-medium text-red-600">
-                                              {renderCompactValue(sh.transition_negative_MU, false)}
-                                            </span>
-                                          </div>
-                                        )}
-                                        <div className="flex justify-between">
-                                          <span className="text-slate-600">Per person:</span>
-                                          <span className={`font-semibold ${sh.transition_per_capita_MU >= 0 ? "text-emerald-700" : "text-red-700"}`}>
-                                            {renderCompactValue(sh.transition_per_capita_MU)}
-                                          </span>
+                                          <p className="text-sm text-slate-600 mt-1 ml-6">{sh.count.toLocaleString()} people</p>
                                         </div>
-                                        <div className="flex justify-between">
-                                          <span className="text-slate-600">Per person-year:</span>
-                                          <span className={`font-semibold ${sh.transition_per_capita_MU_per_year >= 0 ? "text-emerald-700" : "text-red-700"}`}>
-                                            {renderCompactValue(sh.transition_per_capita_MU_per_year)}
-                                          </span>
+                                        {/* Stacked metrics */}
+                                        <div className="text-xs w-36">
+                                          {/* Relative percentages */}
+                                          <div className="flex justify-between gap-2 pb-1">
+                                            <div className="text-right flex-1">
+                                              <p className={`font-semibold ${totalValue >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                                                {percentOfTotal.toFixed(1)}%
+                                              </p>
+                                              <p className="text-slate-500">of total</p>
+                                            </div>
+                                            <div className="text-right flex-1">
+                                              <p className={`font-semibold ${perCapita >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                                                {percentOfPerCapita.toFixed(1)}%
+                                              </p>
+                                              <p className="text-slate-500">per capita</p>
+                                            </div>
+                                          </div>
+                                          {/* Divider */}
+                                          <div className="border-t border-slate-200 my-1"></div>
+                                          {/* Absolute values */}
+                                          <div className="flex justify-between gap-2 pt-1">
+                                            {mode === "transition" ? (
+                                              <>
+                                                <div className="text-right flex-1">
+                                                  <p className={`font-semibold ${sh.transition_total_MU >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                                                    {renderCompactValue(sh.transition_total_MU)}
+                                                  </p>
+                                                  <p className="text-slate-500">net MU</p>
+                                                </div>
+                                                <div className="text-right flex-1">
+                                                  <p className={`font-semibold ${sh.transition_per_capita_MU >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                                                    {renderCompactValue(sh.transition_per_capita_MU)}
+                                                  </p>
+                                                  <p className="text-slate-500">per person</p>
+                                                </div>
+                                              </>
+                                            ) : (
+                                              <>
+                                                <div className="text-right flex-1">
+                                                  <p className={`font-semibold ${(mode === "case_flow" ? sh.case_flow_MU_per_year : sh.structural_MU_per_year) >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                                                    {mode === "case_flow"
+                                                      ? renderCompactValue(sh.case_flow_MU_per_year)
+                                                      : renderCompactValue(sh.structural_MU_per_year)}
+                                                  </p>
+                                                  <p className="text-slate-500">net/yr</p>
+                                                </div>
+                                                <div className="text-right flex-1">
+                                                  <p className={`font-semibold ${(mode === "case_flow" ? sh.case_flow_per_capita_MU_per_year : sh.structural_per_capita_MU_per_year) >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                                                    {mode === "case_flow"
+                                                      ? renderCompactValue(sh.case_flow_per_capita_MU_per_year)
+                                                      : renderCompactValue(sh.structural_per_capita_MU_per_year)}
+                                                  </p>
+                                                  <p className="text-slate-500">per person/yr</p>
+                                                </div>
+                                              </>
+                                            )}
+                                          </div>
                                         </div>
                                       </div>
                                     </div>
-                                  ) : (
-                                    <div className="p-3 bg-purple-50/30">
-                                      <div className="space-y-1 text-xs">
-                                        <div className="flex justify-between">
-                                          <span className="text-slate-600">Flow MU/year:</span>
-                                          <span className={`font-semibold ${(mode === "case_flow" ? sh.case_flow_MU_per_year : sh.structural_MU_per_year) >= 0 ? "text-emerald-700" : "text-red-700"}`}>
-                                  {mode === "case_flow"
-                                    ? renderCompactValue(sh.case_flow_MU_per_year)
-                                    : renderCompactValue(sh.structural_MU_per_year)}
-                                </span>
-                              </div>
-                              {(mode === "case_flow" ? sh.case_flow_positive_MU_per_year : sh.structural_positive_MU_per_year) !== 0 && (
-                              <div className="flex justify-between pl-3">
-                                <span className="text-slate-500">&rarr; Positive:</span>
-                                            <span className="font-medium text-emerald-600">
-                                              +{renderCompactValue(mode === "case_flow" ? sh.case_flow_positive_MU_per_year : sh.structural_positive_MU_per_year, false)}
-                                            </span>
-                                          </div>
-                                        )}
-                                        {(mode === "case_flow" ? sh.case_flow_negative_MU_per_year : sh.structural_negative_MU_per_year) !== 0 && (
-                                          <div className="flex justify-between pl-3">
-                                            <span className="text-slate-500">&rarr; Negative:</span>
-                                            <span className="font-medium text-red-600">
-                                              {renderCompactValue(mode === "case_flow" ? sh.case_flow_negative_MU_per_year : sh.structural_negative_MU_per_year, false)}
-                                            </span>
-                                          </div>
-                                        )}
-                                        <div className="flex justify-between">
-                                          <span className="text-slate-600">Per person per year:</span>
-                                          <span className={`font-semibold ${(mode === "case_flow" ? sh.case_flow_per_capita_MU_per_year : sh.structural_per_capita_MU_per_year) >= 0 ? "text-emerald-700" : "text-red-700"}`}>
-                                            {mode === "case_flow"
-                                              ? renderCompactValue(sh.case_flow_per_capita_MU_per_year)
-                                              : renderCompactValue(sh.structural_per_capita_MU_per_year)}
-                                          </span>
+                                  </summary>
+
+                                  {/* Expanded content - Contributing Factors */}
+                                  <div className="border-t border-slate-200">
+                                    {contributing.length > 0 ? (
+                                      <div className="p-3 bg-white">
+                                        <p className="text-xs font-semibold text-slate-700 mb-2">Contributing Factors</p>
+                                        <div className="space-y-2">
+                                          {contributing.map(({ factor, factorScore, contribution }) => {
+                                            const isPositive = contribution >= 0;
+                                            const percentOfImpact = totalAbsContribution > 0 ? (Math.abs(contribution) / totalAbsContribution) * 100 : 0;
+                                            return (
+                                              <div 
+                                                key={factor.id} 
+                                                className="flex items-start justify-between text-xs p-2 bg-slate-50 rounded cursor-pointer hover:bg-slate-100 transition-colors"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  const factorElement = document.getElementById(`factor-${factor.id}`);
+                                                  if (factorElement) {
+                                                    factorElement.setAttribute('open', 'true');
+                                                    factorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                  }
+                                                }}
+                                              >
+                                                <div className="flex items-start gap-2 flex-1">
+                                                  <div className={`w-1.5 h-1.5 rounded-full mt-1.5 ${isPositive ? "bg-emerald-500" : "bg-red-500"}`} />
+                                                  <div>
+                                                    <p className="font-medium text-slate-800">{factor.name}</p>
+                                                    <p className="text-slate-500 mt-0.5">{factor.description}</p>
+                                                  </div>
+                                                </div>
+                                                <div className="text-right ml-2 shrink-0 flex items-center gap-2">
+                                                  <div>
+                                                    <p className={`font-semibold ${isPositive ? "text-emerald-600" : "text-red-600"}`}>
+                                                      {isPositive ? "+" : ""}{renderCompactValue(contribution, false)}
+                                                    </p>
+                                                    <p className="text-slate-400">{percentOfImpact.toFixed(0)}%</p>
+                                                  </div>
+                                                  <svg className="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                                  </svg>
+                                                </div>
+                                              </div>
+                                            );
+                                          })}
                                         </div>
                                       </div>
-                                    </div>
-                                  )}
-                                </div>
+                                    ) : (
+                                      <div className="p-3 bg-white">
+                                        <p className="text-xs text-slate-500">No contributing factors found.</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </details>
                               );
                             })}
                           </div>
@@ -973,14 +1054,17 @@ export default function Home() {
                                 </p>
                               </div>
                               {[...factors]
-                                .sort((a, b) => Math.abs(b.total_score) - Math.abs(a.total_score))
+                                .sort((a, b) => {
+                                  // Sort by absolute magnitude - biggest first
+                                  return Math.abs(b.total_score) - Math.abs(a.total_score);
+                                })
                                 .map((fs) => {
                                   const factor = decision.factors.find((f) => f.id === fs.factor_id);
                                   if (!factor) return null;
                                   const isPositive = fs.total_score > 0;
                                   const normalizedScore = sumAbsScores > 0 ? (Math.abs(fs.total_score) / sumAbsScores) * 100 : 0;
                                   return (
-                                    <details key={fs.factor_id} className="group border border-slate-200 rounded-lg overflow-hidden">
+                                    <details key={fs.factor_id} id={`factor-${fs.factor_id}`} className="group border border-slate-200 rounded-lg overflow-hidden">
                                       <summary className="flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer">
                                         <div className="flex items-center gap-3">
                                           <div className={`w-2 h-2 rounded-full ${isPositive ? "bg-emerald-500" : "bg-red-500"}`} />
@@ -1023,6 +1107,14 @@ export default function Home() {
                                         <div className="bg-slate-50 p-2 rounded">
                                           <span className="text-slate-500">Who affected:</span>
                                           <p className="text-slate-700">{factor.who_affected}</p>
+                                        </div>
+                                        <div className="bg-slate-50 p-2 rounded">
+                                          <span className="text-slate-500">How much:</span>
+                                          <p className="text-slate-700">{factor.how_much}</p>
+                                        </div>
+                                        <div className="bg-slate-50 p-2 rounded">
+                                          <span className="text-slate-500">Duration:</span>
+                                          <p className="text-slate-700">{factor.duration}</p>
                                         </div>
                                       </div>
 
@@ -1166,6 +1258,24 @@ export default function Home() {
                                             )}
                                           </>
                                         )}
+                                        {factor.temporal_profile === "steady_case_flow" && (
+                                          <div>
+                                            <label className="label-sm">Duration (yrs)</label>
+                                            <input
+                                              type="number"
+                                              min={0} step={0.1}
+                                              value={pair.duration_years ?? 1}
+                                              onChange={(e) => updateDecisionOnly((factors) => {
+                                                const copy = structuredClone(factors);
+                                                const p = copy.find((f) => f.id === factor.id)!.axiom_pairs[idx];
+                                                p.duration_years = parseFloat(e.target.value);
+                                                return copy;
+                                              })}
+                                              onBlur={rescoreDecision}
+                                              className="input input-sm"
+                                            />
+                                          </div>
+                                        )}
                                             </div>
                                             {/* Rationale */}
                                             {pair.rationale && (
@@ -1178,27 +1288,59 @@ export default function Home() {
                                         })}
                                       </div>
 
-                                      {/* Scale Groups */}
+                                      {/* Scale Groups (with Social Distance) */}
                                       <div>
                                         <h4 className="text-sm font-semibold text-slate-700 mb-2">Scale Groups</h4>
-                                        {factor.scale_groups.map((sg, sgIdx) => (
-                                          <div key={`${sg.social_class_id}-${sgIdx}`} className="flex items-center gap-3 bg-slate-50 p-2 rounded-lg mb-2">
-                                            <span className="badge badge-gray">{sg.social_class_id}</span>
-                                            <input
-                                              type="number"
-                                              min={0} step={1}
-                                              value={sg.count}
-                                              onChange={(e) => updateDecisionOnly((factors) => {
-                                                const copy = structuredClone(factors);
-                                                copy.find((f) => f.id === factor.id)!.scale_groups[sgIdx].count = parseInt(e.target.value, 10);
-                                                return copy;
-                                              })}
-                                              onBlur={rescoreDecision}
-                                              className="input input-sm w-24"
-                                            />
-                                            <span className="text-xs text-slate-600 flex-1">{sg.description}</span>
-                                          </div>
-                                        ))}
+                                        {factor.scale_groups.map((sg, sgIdx) => {
+                                          const socialClass = profile.socialClasses.find(sc => sc.id === sg.social_class_id);
+                                          const weight = socialClass?.weight ?? 0.3;
+                                          return (
+                                            <div key={`${sg.social_class_id}-${sgIdx}`} className="border border-slate-100 rounded-lg p-3 mb-2 bg-slate-50/50">
+                                              <div className="flex items-center justify-between mb-2">
+                                                <span className="badge badge-gray">{sg.social_class_id}</span>
+                                                <span className="text-xs text-slate-500">{sg.description}</span>
+                                              </div>
+                                              <div className="grid grid-cols-3 gap-2">
+                                                <div>
+                                                  <label className="label-sm">Count</label>
+                                                  <input
+                                                    type="number"
+                                                    min={0} step={1}
+                                                    value={sg.count}
+                                                    onChange={(e) => updateDecisionOnly((factors) => {
+                                                      const copy = structuredClone(factors);
+                                                      copy.find((f) => f.id === factor.id)!.scale_groups[sgIdx].count = parseInt(e.target.value, 10);
+                                                      return copy;
+                                                    })}
+                                                    onBlur={rescoreDecision}
+                                                    className="input input-sm"
+                                                  />
+                                                </div>
+                                                <div>
+                                                  <label className="label-sm">Social Distance</label>
+                                                  <input
+                                                    type="number"
+                                                    min={0} max={1} step={0.1}
+                                                    value={weight}
+                                                    onChange={(e) => {
+                                                      const newWeight = parseFloat(e.target.value);
+                                                      if (socialClass) {
+                                                        updateSocialClass(socialClass.id, 'weight', newWeight);
+                                                      }
+                                                    }}
+                                                    className="input input-sm"
+                                                  />
+                                                </div>
+                                                <div>
+                                                  <label className="label-sm">Weighted Scale</label>
+                                                  <p className="text-sm font-medium text-slate-700 py-1.5">
+                                                    {(sg.count * weight).toLocaleString()}
+                                                  </p>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
                                       </div>
                                     </div>
                                   </details>
@@ -1257,7 +1399,17 @@ export default function Home() {
           <div className="grid lg:grid-cols-3 gap-6">
             {/* Axiom Weights */}
             <div className="card lg:col-span-2">
-              <h2 className="section-title mb-1">Axiom Weights (MU)</h2>
+              <div className="flex items-center justify-between mb-1">
+                <h2 className="section-title">Axiom Weights (MU)</h2>
+                <button 
+                  onClick={() => {
+                    persistProfile({ ...profile, axiomWeights: { ...DEFAULT_AXIOM_WEIGHTS } });
+                  }}
+                  className="btn btn-ghost btn-sm text-xs"
+                >
+                  Reset to Defaults
+                </button>
+              </div>
               <p className="section-subtitle mb-4">Moral Units per person-year at full intensity</p>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -1288,17 +1440,25 @@ export default function Home() {
             <div className="space-y-6">
               <div className="card">
                 <div className="flex items-center justify-between mb-1">
-                  <h2 className="section-title">Social Classes</h2>
-                  <button onClick={addSocialClass} className="btn btn-ghost btn-sm text-xs">
-                    + Add Class
-                  </button>
+                  <h2 className="section-title">Social Distances</h2>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => persistProfile({ ...profile, socialClasses: [...DEFAULT_SOCIAL_CLASSES] })}
+                      className="btn btn-ghost btn-sm text-xs"
+                    >
+                      Reset
+                    </button>
+                    <button onClick={addSocialClass} className="btn btn-ghost btn-sm text-xs">
+                      + Add
+                    </button>
+                  </div>
                 </div>
                 <p className="section-subtitle mb-4">Editable relationship categories and weights</p>
-                <table className="w-full text-sm">
-                  <tbody>
-                    {profile.socialClasses.map((sc) => (
-                      <tr key={sc.id} className="border-b border-slate-100 last:border-0">
-                        <td className="py-2 pr-2">
+                <div className="space-y-2">
+                  {profile.socialClasses.map((sc) => (
+                    <div key={sc.id} className="border border-slate-100 rounded-lg p-3 bg-slate-50/50">
+                      <div className="flex items-start gap-3">
+                        <div className="flex-1">
                           <input
                             type="text"
                             value={sc.label}
@@ -1307,8 +1467,9 @@ export default function Home() {
                             placeholder="Label"
                           />
                           <div className="text-xs text-slate-500 mt-1">ID: {sc.id}</div>
-                        </td>
-                        <td className="py-2 w-20">
+                        </div>
+                        <div className="w-20">
+                          <label className="label-sm">Weight</label>
                           <input
                             type="number"
                             min={0} step={0.1}
@@ -1316,20 +1477,23 @@ export default function Home() {
                             onChange={(e) => updateSocialClass(sc.id, 'weight', parseFloat(e.target.value))}
                             className="input input-sm w-full text-right"
                           />
-                        </td>
-                        <td className="py-2 w-8">
-                          <button
-                            onClick={() => deleteSocialClass(sc.id)}
-                            className="text-slate-400 hover:text-red-500"
-                            title="Delete"
-                          >
-                            ×
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </div>
+                        <button
+                          onClick={() => deleteSocialClass(sc.id)}
+                          className="text-slate-400 hover:text-red-500 mt-5"
+                          title="Delete"
+                        >
+                          ×
+                        </button>
+                      </div>
+                      {sc.note && (
+                        <p className="text-xs text-slate-600 mt-2 italic border-t border-slate-200 pt-2">
+                          {sc.note}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <div className="card">
