@@ -185,6 +185,18 @@ export default function Home() {
     }
   }, [status]);
 
+  useEffect(() => {
+    const modalOpen = showPrompt || showInputModal;
+    if (modalOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "auto";
+    }
+    return () => {
+      document.body.style.overflow = "auto";
+    };
+  }, [showPrompt, showInputModal]);
+
   const updateAxiomWeight = (id: string, value: number) => {
     persistProfile({ ...profile, axiomWeights: { ...profile.axiomWeights, [id]: value } });
   };
@@ -318,8 +330,8 @@ export default function Home() {
       {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 py-3 md:h-16">
+            <div className="flex items-center gap-3 min-w-[200px]">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
                 <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -330,8 +342,8 @@ export default function Home() {
                 <p className="text-xs text-slate-500 hidden sm:block">Decision Engine</p>
               </div>
             </div>
-            <nav className="flex items-center gap-2">
-              <a href="/user-guide" className="btn btn-ghost btn-sm">
+            <nav className="flex items-center gap-2 w-full sm:w-auto justify-end">
+              <a href="/user-guide" className="btn btn-ghost btn-sm w-full sm:w-auto text-center">
                 User Guide
               </a>
             </nav>
@@ -361,8 +373,8 @@ export default function Home() {
         </div>
 
         {/* Tab Navigation and Action Buttons */}
-        <div className="flex items-center justify-between gap-3 mb-6">
-          <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-6">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-1 p-1 bg-slate-100 rounded-lg w-full sm:w-auto">
             {[
               { id: "input" as Tab, label: "Input & Score", icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" },
               { id: "calibration" as Tab, label: "Calibration", icon: "M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" },
@@ -371,11 +383,12 @@ export default function Home() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                className={`flex items-center justify-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors min-h-[44px] ${ 
                   activeTab === tab.id
                     ? "bg-white text-slate-900 shadow-sm"
                     : "text-slate-600 hover:text-slate-900"
                 }`}
+                style={{ flex: "1 1 0" }}
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={tab.icon} />
@@ -386,23 +399,23 @@ export default function Home() {
           </div>
 
           {activeTab === "input" && (
-            <div className="flex items-center gap-2">
-              <button onClick={() => setShowInputModal(true)} className="btn btn-ghost btn-sm">
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
+              <button onClick={() => setShowInputModal(true)} className="btn btn-ghost btn-sm flex-1 sm:flex-none min-w-[140px]">
                 View Input
               </button>
-              <button onClick={() => setShowPrompt(true)} className="btn btn-ghost btn-sm">
+              <button onClick={() => setShowPrompt(true)} className="btn btn-ghost btn-sm flex-1 sm:flex-none min-w-[140px]">
                 View Prompt
               </button>
-              <button onClick={copyPrompt} className="btn btn-ghost btn-sm">
+              <button onClick={copyPrompt} className="btn btn-ghost btn-sm flex-1 sm:flex-none min-w-[140px]">
                 Copy Prompt
               </button>
-              <button onClick={pasteJson} className="btn btn-ghost btn-sm">
+              <button onClick={pasteJson} className="btn btn-ghost btn-sm flex-1 sm:flex-none min-w-[160px]">
                 <svg className="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                 </svg>
                 Paste from Clipboard
               </button>
-              <button onClick={runScore} className="btn btn-primary btn-sm">
+              <button onClick={runScore} className="btn btn-primary btn-sm flex-1 sm:flex-none min-w-[140px]">
                 <svg className="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
@@ -460,8 +473,8 @@ export default function Home() {
                           </span>
                         </div>
                         <div className="text-sm text-slate-600 mt-2 space-y-1">
-                          <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-4">
+                          <div className="flex flex-col gap-2">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                               <span>
                                 Transition: <span className={`font-semibold ${result.transition_total_MU >= 0 ? "text-emerald-700" : "text-red-700"}`}>
                                   {renderCompactValue(result.transition_total_MU)} MU
@@ -489,7 +502,7 @@ export default function Home() {
                           </div>
                         </div>
                       </div>
-                      <div className="text-right space-y-1">
+                      <div className="text-right space-y-1 mt-3 sm:mt-0">
                         <p className="text-xs text-slate-500">Top contributors</p>
                         {(() => {
                           const factorName = (id: string) =>
@@ -586,7 +599,7 @@ export default function Home() {
                   {/* Temporal Profile Summary */}
                   <div className="card">
                     <h3 className="section-title mb-4">Impact Timeline</h3>
-                    <div className="grid md:grid-cols-3 gap-4 items-stretch">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
                       {/* Transition Section */}
                       <div className="border border-blue-200 rounded-lg p-4 bg-blue-50/30 md:col-span-1">
                         <h4 className="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
@@ -686,8 +699,8 @@ export default function Home() {
                   {result.transition_time_graph && result.transition_time_graph.length > 1 && (
                     <div className="card">
                       <h3 className="section-title mb-4">Transition Impact Over Time</h3>
-                      <div className="h-64 relative">
-                        <svg viewBox="0 0 800 250" className="w-full h-full">
+                      <div className="h-64 relative overflow-x-auto">
+                        <svg viewBox="0 0 800 250" className="w-full h-full min-w-[560px]" preserveAspectRatio="xMidYMid meet">
                           {/* Background grid */}
                           <defs>
                             <pattern id="grid" width="40" height="25" patternUnits="userSpaceOnUse">
@@ -848,7 +861,7 @@ export default function Home() {
 
                       return (
                         <div>
-                          <div className="flex items-center justify-between mb-3">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
                             <h4 className="text-sm font-semibold text-slate-800">{title}</h4>
                             <p className="text-xs text-slate-500">
                               Percentages normalized within this section
@@ -889,7 +902,7 @@ export default function Home() {
                                 >
                                   <summary className="cursor-pointer hover:bg-slate-50 transition-colors list-none">
                                     <div className="bg-slate-50 p-3">
-                                      <div className="flex items-start justify-between">
+                                      <div className="flex flex-col sm:flex-row gap-3 sm:items-start justify-between">
                                         <div className="flex-1">
                                           <div className="flex items-center gap-2">
                                             <svg className="w-4 h-4 text-slate-400 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -900,9 +913,9 @@ export default function Home() {
                                           <p className="text-sm text-slate-600 mt-1 ml-6">{sh.count.toLocaleString()} people</p>
                                         </div>
                                         {/* Stacked metrics */}
-                                        <div className="text-xs w-36">
+                                        <div className="text-xs w-full sm:w-36">
                                           {/* Relative percentages */}
-                                          <div className="flex justify-between gap-2 pb-1">
+                                          <div className="flex sm:justify-between gap-2 pb-1">
                                             <div className="text-right flex-1">
                                               <p className={`font-semibold ${totalValue >= 0 ? "text-emerald-700" : "text-red-700"}`}>
                                                 {percentOfTotal.toFixed(1)}%
@@ -1047,7 +1060,7 @@ export default function Home() {
                           const normalizedLabel = typeLabel.replace(/_/g, " ");
                           return (
                             <div className="space-y-3">
-                              <div className="flex items-center justify-between">
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                                 <h4 className="text-sm font-semibold text-slate-800">{title}</h4>
                                 <p className="text-xs text-slate-500">
                                   Percentages normalized within {normalizedLabel}
@@ -1065,7 +1078,7 @@ export default function Home() {
                                   const normalizedScore = sumAbsScores > 0 ? (Math.abs(fs.total_score) / sumAbsScores) * 100 : 0;
                                   return (
                                     <details key={fs.factor_id} id={`factor-${fs.factor_id}`} className="group border border-slate-200 rounded-lg overflow-hidden">
-                                      <summary className="flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer">
+                                      <summary className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer gap-3">
                                         <div className="flex items-center gap-3">
                                           <div className={`w-2 h-2 rounded-full ${isPositive ? "bg-emerald-500" : "bg-red-500"}`} />
                                           <span className="font-medium text-slate-900">{factor.name}</span>
@@ -1089,7 +1102,7 @@ export default function Home() {
                                         </div>
                                       </summary>
                                       <div className="p-4 bg-white space-y-4">
-                                        <div className="flex items-center justify-between mb-2">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
                                           <p className="text-sm text-slate-600">{factor.description}</p>
                                           <div className="text-right ml-4 shrink-0">
                                             <p className="text-xs text-slate-500">Raw Score</p>
@@ -1099,7 +1112,7 @@ export default function Home() {
                                             <p className="text-xs text-slate-500">({normalizedScore.toFixed(1)}% of {normalizedLabel})</p>
                                           </div>
                                         </div>
-                                      <div className="grid grid-cols-2 gap-2 text-xs">
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                                         <div className="bg-slate-50 p-2 rounded">
                                           <span className="text-slate-500">What changes:</span>
                                           <p className="text-slate-700">{factor.what_changes}</p>
@@ -1128,13 +1141,13 @@ export default function Home() {
                                             : 0;
                                           return (
                                           <div key={`${pair.axiom_id}-${idx}`} className="border border-slate-100 rounded-lg p-3 mb-2 bg-slate-50/50">
-                                            <div className="flex items-center justify-between mb-2">
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                                               <div className="text-sm font-medium text-slate-800">{pair.axiom_id.replace(/_/g, " ")}</div>
                                               <div className="text-xs text-slate-500">
                                                 {axiomContribution.toFixed(1)}% of factor
                                               </div>
                                             </div>
-                                            <div className="grid grid-cols-3 gap-2">
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                                               <div>
                                                 <label className="label-sm">Intensity/yr</label>
                                                 <input
@@ -1296,11 +1309,11 @@ export default function Home() {
                                           const weight = socialClass?.weight ?? 0.3;
                                           return (
                                             <div key={`${sg.social_class_id}-${sgIdx}`} className="border border-slate-100 rounded-lg p-3 mb-2 bg-slate-50/50">
-                                              <div className="flex items-center justify-between mb-2">
+                                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                                                 <span className="badge badge-gray">{sg.social_class_id}</span>
                                                 <span className="text-xs text-slate-500">{sg.description}</span>
                                               </div>
-                                              <div className="grid grid-cols-3 gap-2">
+                                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                                                 <div>
                                                   <label className="label-sm">Count</label>
                                                   <input
@@ -1411,28 +1424,43 @@ export default function Home() {
                 </button>
               </div>
               <p className="section-subtitle mb-4">Moral Units per person-year at full intensity</p>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <tbody>
-                    {DEFAULT_AXIOMS.map((ax) => (
-                      <tr key={ax.id} className="border-b border-slate-100 last:border-0">
-                        <td className="py-3 pr-4">
-                          <div className="font-medium text-slate-900">{ax.name}</div>
-                          <div className="text-xs text-slate-500">{ax.description}</div>
-                        </td>
-                        <td className="py-3 w-24">
-                          <input
-                            type="number"
-                            min={0} step={1}
-                            value={profile.axiomWeights[ax.id] ?? ax.default_weight}
-                            onChange={(e) => updateAxiomWeight(ax.id, parseFloat(e.target.value))}
-                            className="input input-sm w-full text-right"
-                          />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="overflow-x-auto hidden sm:block">
+                  <table className="w-full text-sm">
+                    <tbody>
+                      {DEFAULT_AXIOMS.map((ax) => (
+                        <tr key={ax.id} className="border-b border-slate-100 last:border-0">
+                          <td className="py-3 pr-4">
+                            <div className="font-medium text-slate-900">{ax.name}</div>
+                            <div className="text-xs text-slate-500">{ax.description}</div>
+                          </td>
+                          <td className="py-3 w-24">
+                            <input
+                              type="number"
+                              min={0} step={1}
+                              value={profile.axiomWeights[ax.id] ?? ax.default_weight}
+                              onChange={(e) => updateAxiomWeight(ax.id, parseFloat(e.target.value))}
+                              className="input input-sm w-full text-right"
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="space-y-3 sm:hidden">
+                  {DEFAULT_AXIOMS.map((ax) => (
+                    <div key={ax.id} className="border border-slate-100 rounded-lg p-3 bg-slate-50/50">
+                      <div className="font-medium text-slate-900">{ax.name}</div>
+                      <div className="text-xs text-slate-500 mb-2">{ax.description}</div>
+                      <input
+                        type="number"
+                        min={0} step={1}
+                        value={profile.axiomWeights[ax.id] ?? ax.default_weight}
+                        onChange={(e) => updateAxiomWeight(ax.id, parseFloat(e.target.value))}
+                        className="input input-sm w-full text-right"
+                      />
+                    </div>
+                  ))}
               </div>
             </div>
 
@@ -1624,83 +1652,153 @@ export default function Home() {
                 </div>
                 <p className="section-subtitle mb-4">General reference values for any axiom (0-1)</p>
 
-                <table className="w-full text-xs mb-4">
-                  <tbody>
-                    {intensityAnchors.map((anchor) => (
-                      <tr key={anchor.id} className="border-b border-slate-100 last:border-0">
-                        <td className="py-1.5 w-14">
-                          <input
-                            type="number"
-                            min={0} max={1} step={0.01}
-                            value={anchor.value}
-                            onChange={(e) => {
-                              const newVal = parseFloat(e.target.value) || 0;
-                              setIntensityAnchors(anchors => anchors.map(a =>
-                                a.id === anchor.id ? { ...a, value: newVal } : a
-                              ));
-                            }}
-                            className="w-14 px-2 py-1 border border-slate-200 rounded text-center font-mono text-blue-600 font-semibold bg-white"
-                          />
-                        </td>
+                <div className="hidden sm:block">
+                  <table className="w-full text-xs mb-4">
+                    <tbody>
+                      {intensityAnchors.map((anchor) => (
+                        <tr key={anchor.id} className="border-b border-slate-100 last:border-0">
+                          <td className="py-1.5 w-14">
+                            <input
+                              type="number"
+                              min={0} max={1} step={0.01}
+                              value={anchor.value}
+                              onChange={(e) => {
+                                const newVal = parseFloat(e.target.value) || 0;
+                                setIntensityAnchors(anchors => anchors.map(a =>
+                                  a.id === anchor.id ? { ...a, value: newVal } : a
+                                ));
+                              }}
+                              className="w-14 px-2 py-1 border border-slate-200 rounded text-center font-mono text-blue-600 font-semibold bg-white"
+                            />
+                          </td>
+                          <td className="py-1.5 px-2">
+                            <input
+                              type="text"
+                              value={anchor.label}
+                              onChange={(e) => {
+                                const newLabel = e.target.value;
+                                setIntensityAnchors(anchors => anchors.map(a =>
+                                  a.id === anchor.id ? { ...a, label: newLabel } : a
+                                ));
+                              }}
+                              className="w-full px-2 py-1 border border-slate-200 rounded text-slate-700 bg-white"
+                              placeholder="Enter label..."
+                            />
+                          </td>
+                          <td className="py-1.5 w-8">
+                            <button
+                              onClick={() => setIntensityAnchors(anchors => anchors.filter(a => a.id !== anchor.id))}
+                              className="text-slate-400 hover:text-red-500 p-1"
+                              title="Delete"
+                            >
+                              ×
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      <tr>
+                        <td className="py-1.5 w-14 text-center text-slate-400">0.5</td>
                         <td className="py-1.5 px-2">
                           <input
                             type="text"
-                            value={anchor.label}
-                            onChange={(e) => {
-                              const newLabel = e.target.value;
-                              setIntensityAnchors(anchors => anchors.map(a =>
-                                a.id === anchor.id ? { ...a, label: newLabel } : a
-                              ));
+                            placeholder="Add new anchor..."
+                            value={newAnchorLabel}
+                            onChange={(e) => setNewAnchorLabel(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && newAnchorLabel.trim()) {
+                                setIntensityAnchors(anchors => [...anchors, { id: Date.now().toString(), label: newAnchorLabel.trim(), value: 0.5 }]);
+                                setNewAnchorLabel("");
+                              }
                             }}
-                            className="w-full px-2 py-1 border border-slate-200 rounded text-slate-700 bg-white"
-                            placeholder="Enter label..."
+                            className="w-full px-2 py-1 border border-slate-200 rounded text-slate-700 bg-slate-50"
                           />
                         </td>
                         <td className="py-1.5 w-8">
                           <button
-                            onClick={() => setIntensityAnchors(anchors => anchors.filter(a => a.id !== anchor.id))}
-                            className="text-slate-400 hover:text-red-500 p-1"
-                            title="Delete"
+                            onClick={() => {
+                              if (newAnchorLabel.trim()) {
+                                setIntensityAnchors(anchors => [...anchors, { id: Date.now().toString(), label: newAnchorLabel.trim(), value: 0.5 }]);
+                                setNewAnchorLabel("");
+                              }
+                            }}
+                            className="text-blue-600 hover:text-blue-800 font-bold p-1"
+                            title="Add"
                           >
-                            ×
+                            +
                           </button>
                         </td>
                       </tr>
-                    ))}
-                    <tr>
-                      <td className="py-1.5 w-14 text-center text-slate-400">0.5</td>
-                      <td className="py-1.5 px-2">
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="space-y-2 sm:hidden">
+                  {intensityAnchors.map((anchor) => (
+                    <div key={anchor.id} className="border border-slate-100 rounded-lg p-3 bg-slate-50/50">
+                      <div className="flex items-center justify-between gap-2">
                         <input
-                          type="text"
-                          placeholder="Add new anchor..."
-                          value={newAnchorLabel}
-                          onChange={(e) => setNewAnchorLabel(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && newAnchorLabel.trim()) {
-                              setIntensityAnchors(anchors => [...anchors, { id: Date.now().toString(), label: newAnchorLabel.trim(), value: 0.5 }]);
-                              setNewAnchorLabel("");
-                            }
+                          type="number"
+                          min={0} max={1} step={0.01}
+                          value={anchor.value}
+                          onChange={(e) => {
+                            const newVal = parseFloat(e.target.value) || 0;
+                            setIntensityAnchors(anchors => anchors.map(a =>
+                              a.id === anchor.id ? { ...a, value: newVal } : a
+                            ));
                           }}
-                          className="w-full px-2 py-1 border border-slate-200 rounded text-slate-700 bg-slate-50"
+                          className="w-16 px-2 py-1 border border-slate-200 rounded text-center font-mono text-blue-600 font-semibold bg-white"
                         />
-                      </td>
-                      <td className="py-1.5 w-8">
                         <button
-                          onClick={() => {
-                            if (newAnchorLabel.trim()) {
-                              setIntensityAnchors(anchors => [...anchors, { id: Date.now().toString(), label: newAnchorLabel.trim(), value: 0.5 }]);
-                              setNewAnchorLabel("");
-                            }
-                          }}
-                          className="text-blue-600 hover:text-blue-800 font-bold p-1"
-                          title="Add"
+                          onClick={() => setIntensityAnchors(anchors => anchors.filter(a => a.id !== anchor.id))}
+                          className="text-slate-400 hover:text-red-500 p-1"
+                          title="Delete"
                         >
-                          +
+                          ×
                         </button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                      </div>
+                      <input
+                        type="text"
+                        value={anchor.label}
+                        onChange={(e) => {
+                          const newLabel = e.target.value;
+                          setIntensityAnchors(anchors => anchors.map(a =>
+                            a.id === anchor.id ? { ...a, label: newLabel } : a
+                          ));
+                        }}
+                        className="w-full mt-2 px-2 py-1 border border-slate-200 rounded text-slate-700 bg-white"
+                        placeholder="Enter label..."
+                      />
+                    </div>
+                  ))}
+                  <div className="border border-dashed border-slate-200 rounded-lg p-3 bg-slate-50/30 flex items-center gap-2">
+                    <span className="text-slate-400">0.5</span>
+                    <input
+                      type="text"
+                      placeholder="Add new anchor..."
+                      value={newAnchorLabel}
+                      onChange={(e) => setNewAnchorLabel(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && newAnchorLabel.trim()) {
+                          setIntensityAnchors(anchors => [...anchors, { id: Date.now().toString(), label: newAnchorLabel.trim(), value: 0.5 }]);
+                          setNewAnchorLabel("");
+                        }
+                      }}
+                      className="flex-1 px-2 py-1 border border-slate-200 rounded text-slate-700 bg-white"
+                    />
+                    <button
+                      onClick={() => {
+                        if (newAnchorLabel.trim()) {
+                          setIntensityAnchors(anchors => [...anchors, { id: Date.now().toString(), label: newAnchorLabel.trim(), value: 0.5 }]);
+                          setNewAnchorLabel("");
+                        }
+                      }}
+                      className="text-blue-600 hover:text-blue-800 font-bold p-1"
+                      title="Add"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
 
                 {/* Domain-specific examples */}
                 <div className="border-t border-slate-200 pt-4">
@@ -1741,7 +1839,7 @@ export default function Home() {
       {/* Prompt Modal */}
       {showPrompt && (
         <div className="modal-backdrop" onClick={() => setShowPrompt(false)}>
-          <div className="modal-content w-full max-w-3xl" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content w-full max-w-3xl sm:max-w-3xl h-[calc(100vh-2rem)] sm:h-auto rounded-none sm:rounded-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-slate-200">
               <h3 className="text-lg font-semibold">AI Prompt</h3>
               <button onClick={() => setShowPrompt(false)} className="btn btn-ghost btn-sm">
@@ -1768,7 +1866,7 @@ export default function Home() {
       {/* Input Modal */}
       {showInputModal && (
         <div className="modal-backdrop" onClick={() => setShowInputModal(false)}>
-          <div className="modal-content w-full max-w-4xl" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content w-full max-w-4xl sm:max-w-4xl h-[calc(100vh-2rem)] sm:h-auto rounded-none sm:rounded-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-slate-200">
               <div>
                 <h3 className="text-lg font-semibold">Decision JSON</h3>

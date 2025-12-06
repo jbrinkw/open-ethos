@@ -35,7 +35,7 @@ export default function UserGuide() {
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Hero Section */}
         <div className="mb-12">
-          <h1 className="text-4xl font-bold text-slate-900 mb-4">Open Ethos User Guide</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">Open Ethos User Guide</h1>
           <p className="text-xl text-slate-600 leading-relaxed">
             A comprehensive guide to understanding and using the Open Ethos Decision Engine for
             transparent, principled moral reasoning.
@@ -43,9 +43,45 @@ export default function UserGuide() {
         </div>
 
         {/* Table of Contents */}
-        <nav className="card mb-8">
+        <details className="card mb-4 sm:hidden" open>
+          <summary className="flex items-center justify-between cursor-pointer text-lg font-semibold text-slate-900">
+            Table of Contents
+            <svg className="w-4 h-4 text-slate-400 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </summary>
+          <div className="mt-3 grid grid-cols-1 gap-2">
+            {[
+              { href: "#overview", label: "Overview & Philosophy" },
+              { href: "#getting-started", label: "Getting Started" },
+              { href: "#scoring-formula", label: "The Scoring Formula" },
+              { href: "#axioms", label: "The Eight Axioms" },
+              { href: "#time-integration", label: "Time Integration" },
+              { href: "#social-distance", label: "Social Distance Weighting" },
+              { href: "#json-structure", label: "JSON Structure" },
+              { href: "#calibration", label: "Calibrating Your Profile" },
+              { href: "#interpreting-results", label: "Interpreting Results" },
+              { href: "#best-practices", label: "Best Practices" },
+              { href: "#examples", label: "Worked Examples" },
+              { href: "#faq", label: "FAQ" },
+            ].map((item) => (
+              <a
+                key={item.href}
+                href={item.href}
+                className="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 text-slate-700 hover:text-blue-600 transition-colors"
+              >
+                <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+                {item.label}
+              </a>
+            ))}
+          </div>
+        </details>
+
+        <nav className="card mb-8 hidden sm:block">
           <h2 className="text-lg font-semibold text-slate-900 mb-4">Table of Contents</h2>
-          <div className="grid sm:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {[
               { href: "#overview", label: "Overview & Philosophy" },
               { href: "#getting-started", label: "Getting Started" },
@@ -75,7 +111,7 @@ export default function UserGuide() {
         </nav>
 
         {/* Overview Section */}
-        <section id="overview" className="card mb-6">
+        <section id="overview" className="card mb-6 scroll-mt-24">
           <h2 className="text-2xl font-bold text-slate-900 mb-4">Overview & Philosophy</h2>
           <div className="prose-content">
             <p>
@@ -130,7 +166,7 @@ export default function UserGuide() {
         </section>
 
         {/* Getting Started Section */}
-        <section id="getting-started" className="card mb-6">
+        <section id="getting-started" className="card mb-6 scroll-mt-24">
           <h2 className="text-2xl font-bold text-slate-900 mb-4">Getting Started</h2>
           <div className="prose-content">
             <p>
@@ -177,7 +213,7 @@ export default function UserGuide() {
         </section>
 
         {/* Scoring Formula Section */}
-        <section id="scoring-formula" className="card mb-6">
+        <section id="scoring-formula" className="card mb-6 scroll-mt-24">
           <h2 className="text-2xl font-bold text-slate-900 mb-4">The Scoring Formula</h2>
           <div className="prose-content">
             <p>
@@ -265,7 +301,7 @@ export default function UserGuide() {
         </section>
 
         {/* Axioms Section */}
-        <section id="axioms" className="card mb-6">
+        <section id="axioms" className="card mb-6 scroll-mt-24">
           <h2 className="text-2xl font-bold text-slate-900 mb-4">The Eight Axioms</h2>
           <div className="prose-content">
             <p>
@@ -422,7 +458,7 @@ export default function UserGuide() {
         </section>
 
         {/* Time Integration Section */}
-        <section id="time-integration" className="card mb-6">
+        <section id="time-integration" className="card mb-6 scroll-mt-24">
           <h2 className="text-2xl font-bold text-slate-900 mb-4">Time Integration</h2>
           <div className="prose-content">
             <p>
@@ -471,7 +507,7 @@ export default function UserGuide() {
         </section>
 
         {/* Social Distance Section */}
-        <section id="social-distance" className="card mb-6">
+        <section id="social-distance" className="card mb-6 scroll-mt-24">
           <h2 className="text-2xl font-bold text-slate-900 mb-4">Social Distance Weighting</h2>
           <div className="prose-content">
             <p>
@@ -536,7 +572,7 @@ export default function UserGuide() {
         </section>
 
         {/* JSON Structure Section */}
-        <section id="json-structure" className="card mb-6">
+        <section id="json-structure" className="card mb-6 scroll-mt-24">
           <h2 className="text-2xl font-bold text-slate-900 mb-4">JSON Structure</h2>
           <div className="prose-content">
             <p>
@@ -607,7 +643,7 @@ export default function UserGuide() {
         </section>
 
         {/* Calibration Section */}
-        <section id="calibration" className="card mb-6">
+        <section id="calibration" className="card mb-6 scroll-mt-24">
           <h2 className="text-2xl font-bold text-slate-900 mb-4">Calibrating Your Profile</h2>
           <div className="prose-content">
             <p>
@@ -652,7 +688,7 @@ export default function UserGuide() {
         </section>
 
         {/* Interpreting Results Section */}
-        <section id="interpreting-results" className="card mb-6">
+        <section id="interpreting-results" className="card mb-6 scroll-mt-24">
           <h2 className="text-2xl font-bold text-slate-900 mb-4">Interpreting Results</h2>
           <div className="prose-content">
             <h3>The Overall Verdict</h3>
@@ -696,7 +732,7 @@ export default function UserGuide() {
         </section>
 
         {/* Best Practices Section */}
-        <section id="best-practices" className="card mb-6">
+        <section id="best-practices" className="card mb-6 scroll-mt-24">
           <h2 className="text-2xl font-bold text-slate-900 mb-4">Best Practices</h2>
           <div className="prose-content">
             <h3>When Generating Decisions</h3>
@@ -757,7 +793,7 @@ export default function UserGuide() {
         </section>
 
         {/* Examples Section */}
-        <section id="examples" className="card mb-6">
+        <section id="examples" className="card mb-6 scroll-mt-24">
           <h2 className="text-2xl font-bold text-slate-900 mb-4">Worked Examples</h2>
           <div className="prose-content">
             <h3>Example 1: Lying to Protect Feelings</h3>
@@ -813,7 +849,7 @@ export default function UserGuide() {
         </section>
 
         {/* FAQ Section */}
-        <section id="faq" className="card mb-6">
+        <section id="faq" className="card mb-6 scroll-mt-24">
           <h2 className="text-2xl font-bold text-slate-900 mb-4">Frequently Asked Questions</h2>
           <div className="prose-content">
             <div className="space-y-6">

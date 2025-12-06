@@ -25,6 +25,36 @@ body {
   @apply bg-white shadow-sm rounded-lg border border-slate-200 p-4;
 }
 
+/* Responsive helpers */
+.grid-1-2 {
+  @apply grid gap-3;
+}
+
+@media (min-width: 640px) {
+  .grid-1-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.stack-sm {
+  @apply flex flex-col gap-3;
+}
+
+/* Mobile padding tweaks */
+@media (max-width: 640px) {
+  .card {
+    @apply p-4;
+  }
+
+  .card-compact {
+    @apply p-3;
+  }
+
+  .btn {
+    @apply px-3 py-2;
+  }
+}
+
 /* Button styles */
 .btn {
   @apply inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
