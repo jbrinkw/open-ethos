@@ -61,29 +61,12 @@ export default function UserGuide() {
         </div>
 
         {/* Project status banner */}
-        <div className="mb-10 rounded-xl border border-amber-200 bg-amber-50 p-5">
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
-              <svg className="w-5 h-5 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div>
-              <h2 className="font-semibold text-amber-900">
-                Project status: working proof of concept, broader vision still in concept phase
-              </h2>
-              <p className="text-sm text-amber-800 mt-2 leading-relaxed">
-                Open Ethos is a developing idea. The decision engine and this interface are a working
-                proof of concept &mdash; the scoring math and editor you see here run real decisions in your
-                browser today. The broader civic-stack vision, public profiles, political accountability
-                tooling, cross-cultural value mapping, and AI-alignment dataset described below are{" "}
-                <strong>directional ideas, not built features</strong>. Sections marked
-                {" "}<span className="badge badge-yellow align-middle">Direction &mdash; not built yet</span>
-                {" "}describe where this could go, not what currently ships. That&apos;s okay: the PoC is real
-                and strong enough that this guide can honestly describe the destination.
-              </p>
-            </div>
-          </div>
+        <div className="mb-8 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+          <p className="text-sm text-amber-900">
+            <strong>Project status:</strong> the decision engine and editor are a working PoC. The
+            broader vision below (civic stack, public profiles, accountability tooling, alignment data)
+            is conceptual, not built.
+          </p>
         </div>
 
         {/* Table of Contents - Mobile */}
