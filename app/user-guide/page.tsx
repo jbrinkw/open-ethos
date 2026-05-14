@@ -2,6 +2,25 @@
 
 import Link from "next/link";
 
+const TOC_ITEMS = [
+  { href: "#why", label: "Why Open Ethos Exists" },
+  { href: "#what", label: "What Open Ethos Is" },
+  { href: "#broader-stack", label: "The Broader Civic Stack" },
+  { href: "#public-profiles", label: "Public Profiles" },
+  { href: "#scoring-formula", label: "The Scoring Formula" },
+  { href: "#axioms", label: "The Eight Axioms" },
+  { href: "#time-integration", label: "Time Integration" },
+  { href: "#social-distance", label: "Social Distance Weighting" },
+  { href: "#magic-factor", label: "The Magic Factor" },
+  { href: "#getting-started", label: "Getting Started" },
+  { href: "#calibration", label: "Calibrating Your Profile" },
+  { href: "#interpreting-results", label: "Interpreting Results" },
+  { href: "#coherence", label: "Working Toward Coherence" },
+  { href: "#best-practices", label: "Best Practices" },
+  { href: "#examples", label: "Worked Examples" },
+  { href: "#faq", label: "FAQ" },
+];
+
 export default function UserGuide() {
   return (
     <div className="min-h-screen bg-slate-50">
@@ -34,15 +53,40 @@ export default function UserGuide() {
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Hero Section */}
-        <div className="mb-12">
+        <div className="mb-6">
           <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">Open Ethos User Guide</h1>
           <p className="text-xl text-slate-600 leading-relaxed">
-            A comprehensive guide to understanding and using the Open Ethos Decision Engine for
-            transparent, principled moral reasoning.
+            Transparent, principled moral reasoning for complex decisions.
           </p>
         </div>
 
-        {/* Table of Contents */}
+        {/* Project status banner */}
+        <div className="mb-10 rounded-xl border border-amber-200 bg-amber-50 p-5">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="font-semibold text-amber-900">
+                Project status: working proof of concept, broader vision still in concept phase
+              </h2>
+              <p className="text-sm text-amber-800 mt-2 leading-relaxed">
+                Open Ethos is a developing idea. The decision engine and this interface are a working
+                proof of concept &mdash; the scoring math and editor you see here run real decisions in your
+                browser today. The broader civic-stack vision, public profiles, political accountability
+                tooling, cross-cultural value mapping, and AI-alignment dataset described below are{" "}
+                <strong>directional ideas, not built features</strong>. Sections marked
+                {" "}<span className="badge badge-yellow align-middle">Direction &mdash; not built yet</span>
+                {" "}describe where this could go, not what currently ships. That&apos;s okay: the PoC is real
+                and strong enough that this guide can honestly describe the destination.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Table of Contents - Mobile */}
         <details className="card mb-4 sm:hidden" open>
           <summary className="flex items-center justify-between cursor-pointer text-lg font-semibold text-slate-900">
             Table of Contents
@@ -51,20 +95,7 @@ export default function UserGuide() {
             </svg>
           </summary>
           <div className="mt-3 grid grid-cols-1 gap-2">
-            {[
-              { href: "#overview", label: "Overview & Philosophy" },
-              { href: "#getting-started", label: "Getting Started" },
-              { href: "#scoring-formula", label: "The Scoring Formula" },
-              { href: "#axioms", label: "The Eight Axioms" },
-              { href: "#time-integration", label: "Time Integration" },
-              { href: "#social-distance", label: "Social Distance Weighting" },
-              { href: "#json-structure", label: "JSON Structure" },
-              { href: "#calibration", label: "Calibrating Your Profile" },
-              { href: "#interpreting-results", label: "Interpreting Results" },
-              { href: "#best-practices", label: "Best Practices" },
-              { href: "#examples", label: "Worked Examples" },
-              { href: "#faq", label: "FAQ" },
-            ].map((item) => (
+            {TOC_ITEMS.map((item) => (
               <a
                 key={item.href}
                 href={item.href}
@@ -79,23 +110,11 @@ export default function UserGuide() {
           </div>
         </details>
 
+        {/* Table of Contents - Desktop */}
         <nav className="card mb-8 hidden sm:block">
           <h2 className="text-lg font-semibold text-slate-900 mb-4">Table of Contents</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {[
-              { href: "#overview", label: "Overview & Philosophy" },
-              { href: "#getting-started", label: "Getting Started" },
-              { href: "#scoring-formula", label: "The Scoring Formula" },
-              { href: "#axioms", label: "The Eight Axioms" },
-              { href: "#time-integration", label: "Time Integration" },
-              { href: "#social-distance", label: "Social Distance Weighting" },
-              { href: "#json-structure", label: "JSON Structure" },
-              { href: "#calibration", label: "Calibrating Your Profile" },
-              { href: "#interpreting-results", label: "Interpreting Results" },
-              { href: "#best-practices", label: "Best Practices" },
-              { href: "#examples", label: "Worked Examples" },
-              { href: "#faq", label: "FAQ" },
-            ].map((item) => (
+            {TOC_ITEMS.map((item) => (
               <a
                 key={item.href}
                 href={item.href}
@@ -110,105 +129,328 @@ export default function UserGuide() {
           </div>
         </nav>
 
-        {/* Overview Section */}
-        <section id="overview" className="card mb-6 scroll-mt-24">
-          <h2 className="text-2xl font-bold text-slate-900 mb-4">Overview & Philosophy</h2>
+        {/* Why Open Ethos Exists */}
+        <section id="why" className="card mb-6 scroll-mt-24">
+          <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+            <h2 className="text-2xl font-bold text-slate-900">Why Open Ethos Exists</h2>
+            <span className="badge badge-yellow">Direction &mdash; not built yet</span>
+          </div>
           <div className="prose-content">
             <p>
-              The Open Ethos Decision Engine is a <strong>transparent moral scoring calculator</strong> that helps
-              you analyze ethical decisions using a principled, mathematical framework. Unlike opaque AI systems that
-              give you a single answer, Open Ethos shows you exactly how it arrives at its conclusions.
+              Open Ethos is built to address five problems, ordered here from the most far-reaching to the
+              most personal. The first two are the reason the project matters at scale. The last three are
+              the foundation everything else is built on.
+            </p>
+            <ul>
+              <li><a href="#ai-alignment" className="text-blue-600 hover:underline">The Value Specification Problem: Making AI Alignment Possible</a></li>
+              <li><a href="#political-dysfunction" className="text-blue-600 hover:underline">The Political Dysfunction Problem: Accountability Without Bias</a></li>
+              <li><a href="#cross-cultural" className="text-blue-600 hover:underline">The Cross-Cultural Understanding Problem: Seeing Through the Noise</a></li>
+              <li><a href="#decision-quality" className="text-blue-600 hover:underline">The Decision Quality Problem: Reasoning Instead of Reacting</a></li>
+              <li><a href="#self-knowledge" className="text-blue-600 hover:underline">The Self-Knowledge Problem: Knowing What You Actually Believe</a></li>
+            </ul>
+
+            <h3 id="ai-alignment" className="scroll-mt-24">The Value Specification Problem: Making AI Alignment Possible</h3>
+            <p>
+              The paperclip problem isn&apos;t about paperclips. It&apos;s about the gap between what humans
+              value and what we can formally specify to an optimization system. Every current alignment
+              approach tries to close that gap from the AI side: RLHF infers values from
+              thumbs-up/thumbs-down (noisy, shallow, biased toward the feedback population), Constitutional
+              AI has a small team write principles (whose values?), inverse reward design reverse-engineers
+              values from behavior (behavior reflects constraints and incentives, not just values). All are
+              indirect approximations of something that does not exist yet: a large-scale, structured,
+              machine-readable dataset of what humans actually value, stated directly, verified for
+              consistency, and honest about where values conflict.
+            </p>
+            <p>
+              Open Ethos produces exactly that. When a user calibrates weights across eight moral axioms,
+              sets social distance preferences and time horizons, then demonstrates coherence between that
+              calibration and their judgments across diverse cases, they generate a formally articulated
+              value specification richer than anything alignment research currently has access to. At
+              population scale, across millions of users from different cultures, political orientations,
+              and moral traditions, this becomes a map of human values with structure and verification that
+              has never existed.
+            </p>
+            <p>
+              Critically, the data captures genuine disagreement. Different users weight axioms differently,
+              and the system does not pretend there is a single correct answer. An alignment system trained
+              on this data learns not just what humans value but where they agree, where they disagree, by
+              how much, and what the shape of disagreement looks like. That lets alignment systems navigate
+              real moral uncertainty rather than flattening it into a single reward signal.
             </p>
 
-            <h3>Core Principles</h3>
-            <ul>
-              <li>
-                <strong>Transparency:</strong> Every calculation is visible. You can see exactly how each factor
-                contributes to the final score and understand why the engine recommends YES, NO, or NEUTRAL.
-              </li>
-              <li>
-                <strong>Customizability:</strong> Your values matter. Adjust axiom weights to reflect your personal
-                moral priorities. Someone who prioritizes autonomy over collective wellbeing will get different
-                results than someone with opposite priorities.
-              </li>
-              <li>
-                <strong>Contestation-Aware:</strong> The engine doesn&apos;t just give you a direction—it tells you how
-                contested the decision is. A &quot;strong yes&quot; means most factors align; a &quot;weak yes&quot; means there are
-                significant countervailing considerations.
-              </li>
-              <li>
-                <strong>Time-Sensitive:</strong> Future impacts are discounted based on your moral half-life setting.
-                This reflects the intuition that impacts happening 50 years from now may matter differently than
-                impacts happening tomorrow.
-              </li>
-              <li>
-                <strong>Client-Side Only:</strong> All processing happens in your browser. No data is sent to any server.
-                Your moral deliberations remain private.
-              </li>
-            </ul>
+            <h3 id="political-dysfunction" className="scroll-mt-24">The Political Dysfunction Problem: Accountability Without Bias</h3>
+            <p>
+              Every high-stakes professional domain has accountability mechanisms tying decision-makers to
+              their stated reasoning. Scientists publish falsifiable predictions. Traders take positions
+              marked to market. Engineers sign specifications. Politicians have nothing comparable: vague
+              promises, untracked position shifts, zero scored consistency. The system selects for people
+              skilled at performing conviction rather than holding it.
+            </p>
+            <p>
+              Open Ethos makes political reasoning auditable. A politician who publishes their profile
+              commits to a formal value model: specific axiom weights, demonstrated through case judgments,
+              verified for coherence. Every subsequent vote becomes checkable against their own framework.
+              Not against an external standard, not against the opposition&apos;s values, against the
+              politician&apos;s own stated calibration. Drift becomes visible. Contradictions become
+              quantifiable. Consistency becomes comparable across politicians and across time.
+            </p>
+            <p>
+              For voters, this means you can read what a candidate actually commits to valuing and compare
+              it to alternatives. For journalists, it means accountability reporting that does not require
+              taking sides, because the standard was set by the subject. For the system, it means the same
+              commitment-and-verification discipline that makes every other professional domain function,
+              imported into the one domain operating without it.
+            </p>
+            <p>
+              Adoption does not require mandates. Challengers publish profiles as a differentiator.
+              Incumbents face growing cost of refusal. Competitive pressure does the rest, the same dynamic
+              that made tax return disclosure a de facto presidential requirement.
+            </p>
 
-            <h3>What This Tool Is NOT</h3>
-            <ul>
-              <li>
-                <strong>Not a moral authority:</strong> The engine doesn&apos;t tell you what&apos;s right—it helps you think
-                through the implications of your own values applied to a specific situation.
-              </li>
-              <li>
-                <strong>Not a substitute for judgment:</strong> Edge cases, context, and nuance matter. Use this as
-                a structured thinking aid, not a decision-maker.
-              </li>
-              <li>
-                <strong>Not objective truth:</strong> The output depends entirely on the inputs. Garbage in, garbage out.
-                The quality of your factor analysis determines the quality of the result.
-              </li>
-            </ul>
+            <h3 id="cross-cultural" className="scroll-mt-24">The Cross-Cultural Understanding Problem: Seeing Through the Noise</h3>
+            <p>
+              Most cross-cultural conflict looks like a clash of civilizations. Much of it is actually a
+              small gap in value weighting, amplified by language differences, historical grievance, and
+              tribal psychology until it feels impassable. We cannot tell the difference because we have
+              never had a shared framework for comparing values across cultures that is structured enough
+              to be precise but flexible enough to accommodate genuine diversity.
+            </p>
+            <p>
+              Open Ethos gives every user the same eight-axiom framework regardless of culture, language,
+              or political tradition. A user in Tokyo and a user in Lagos calibrate the same dimensions.
+              The comparison is direct: not &quot;what policies do you support&quot; (culturally loaded) but
+              &quot;how do you weight these moral dimensions&quot; (culturally portable).
+            </p>
+            <p>
+              At scale, this produces a map of where human values actually converge and diverge across
+              cultural boundaries. Some conflicts that feel deep would turn out to rest on small weighting
+              differences both sides could negotiate around. Some apparent agreements would turn out to
+              mask deeper divergences being papered over by shared language. Both findings are valuable.
+            </p>
+            <p>
+              For diplomacy, negotiators enter knowing the actual shape of value disagreement rather than
+              guessing from stereotypes. For multicultural societies, it offers concrete identification of
+              common ground across communities that currently interact through suspicion. For ordinary
+              people, it gives a specific answer to &quot;why do they see it differently&quot;: not
+              &quot;because they are wrong&quot; but &quot;because they weight autonomy at 0.8 and social
+              trust at 0.4 while you do the reverse, and here is where that produces different
+              conclusions.&quot;
+            </p>
+            <p>
+              The framework does not erase disagreement. It makes disagreement legible. Legible
+              disagreement is the precondition for every form of resolution.
+            </p>
+
+            <h3 id="decision-quality" className="scroll-mt-24">The Decision Quality Problem: Reasoning Instead of Reacting</h3>
+            <p>
+              Most decisions are made by gut reaction, then post-hoc rationalized into something that
+              sounds principled. Not because people are stupid, but because holding multiple stakeholders,
+              competing values, uncertain outcomes, and different time horizons in mind simultaneously is
+              genuinely beyond unaided human cognition.
+            </p>
+            <p>
+              Open Ethos forces what intuition skips: enumerate the actual factors, identify who is
+              affected, estimate intensity and duration, assign honest confidence levels, and weigh
+              everything against stated values with the math visible. The output is not &quot;the right
+              answer.&quot; It is a structured view of what your own values imply, including how contested
+              the decision is and which parameters would flip the verdict.
+            </p>
+            <p>
+              This matters most where intuition is least reliable: long time horizons (hyperbolic
+              discounting biases toward the present), impacts on distant people (social distance bias
+              underweights their interests), multi-value conflicts (the loudest value drowns the others),
+              and decisions under uncertainty (overconfidence masquerades as conviction). The engine does
+              not replace judgment. It structures it, so the user sees exactly which considerations push
+              which direction and by how much before making the call.
+            </p>
+
+            <h3 id="self-knowledge" className="scroll-mt-24">The Self-Knowledge Problem: Knowing What You Actually Believe</h3>
+            <p>
+              Most people can list their values: freedom, fairness, honesty, compassion. The list is real
+              and nearly useless, because it contains no information about how these values relate when
+              they conflict, which they do in virtually every interesting decision. Do you value freedom
+              more than fairness? By how much? Does it depend on who is affected? Does your answer match
+              how you actually reasoned the last time they conflicted?
+            </p>
+            <p>
+              Open Ethos makes the gaps visible. Formalize values as specific weights, test those weights
+              against real case judgments, and contradictions surface: you say you weight fairness at 0.8
+              but your judgment implies 0.3. You say you care about future impacts but your time settings
+              discount them to near zero. You say outsiders matter but your social distance weights
+              effectively ignore them.
+            </p>
+            <p>
+              These are not accusations. They are the user&apos;s own inputs reflected back. Resolution
+              happens however the user sees fit: update the calibration, update the judgment, add a magic
+              factor for something the framework does not capture, or sit with a genuine value conflict.
+              All four produce self-knowledge that did not exist before.
+            </p>
+            <p>
+              Over time, a user who has resolved dozens of contradictions and refined their calibration
+              until it predicts their own judgments on unseen cases has achieved something rare: they know
+              what they believe, they know why, and they can demonstrate consistency between stated values
+              and actual reasoning. Open Ethos is the thing that forces the examination, not by telling
+              you what to believe, but by showing you what you already believe and asking whether you are
+              okay with it.
+            </p>
           </div>
         </section>
 
-        {/* Getting Started Section */}
-        <section id="getting-started" className="card mb-6 scroll-mt-24">
-          <h2 className="text-2xl font-bold text-slate-900 mb-4">Getting Started</h2>
+        {/* What Open Ethos Is */}
+        <section id="what" className="card mb-6 scroll-mt-24">
+          <h2 className="text-2xl font-bold text-slate-900 mb-4">What Open Ethos Is</h2>
           <div className="prose-content">
             <p>
-              Here&apos;s the basic workflow for using Open Ethos:
+              Open Ethos is a transparent moral scoring engine. It makes values explicit, structured, and
+              checkable. Unlike opaque systems that return a single answer, Open Ethos shows exactly how
+              it reaches every conclusion.
+            </p>
+
+            <h3>Core principles</h3>
+            <ul>
+              <li>
+                <strong>Transparency.</strong> Every calculation is visible. You see how each factor
+                contributes to the final score and why the engine returns YES, NO, or NEUTRAL.
+              </li>
+              <li>
+                <strong>Customizability.</strong> Your values are the input. Axiom weights, social
+                distance weights, and time discounting are all user-controlled. Someone who prioritizes
+                autonomy over collective welfare gets different results than someone with the opposite
+                calibration.
+              </li>
+              <li>
+                <strong>Contestation-awareness.</strong> The engine reports not just a direction but how
+                contested the decision is. A strong YES means most factors align. A weak YES means
+                significant countervailing considerations exist.
+              </li>
+              <li>
+                <strong>Time-sensitivity.</strong> Future impacts are discounted based on your moral
+                half-life setting.
+              </li>
+              <li>
+                <strong>Client-side only.</strong> All processing happens in your browser. No data is
+                sent to any server unless you explicitly choose to publish a profile.
+              </li>
+            </ul>
+
+            <h3>What Open Ethos is not</h3>
+            <ul>
+              <li>
+                <strong>Not a moral authority.</strong> It does not tell you what is right. It tells you
+                what your own values imply about a specific situation.
+              </li>
+              <li>
+                <strong>Not a political alignment tool.</strong> It does not sort you left or right. It
+                maps your actual value weightings, which may not match any party.
+              </li>
+              <li>
+                <strong>Not an opinion machine.</strong> It does not generate conclusions. It checks
+                whether your conclusions are consistent with your stated framework.
+              </li>
+              <li>
+                <strong>Not a substitute for judgment.</strong> Edge cases, context, and nuance matter.
+                The final decision is always yours.
+              </li>
+              <li>
+                <strong>Not claiming to capture everything.</strong> The magic factor mechanism
+                explicitly acknowledges that some moral intuitions resist formalization.
+              </li>
+            </ul>
+
+            <p>
+              The same tool serves everyone: individuals, activists, journalists, and politicians use the
+              identical framework. That shared framework is what makes comparison and accountability
+              possible.
+            </p>
+          </div>
+        </section>
+
+        {/* The Broader Civic Stack */}
+        <section id="broader-stack" className="card mb-6 scroll-mt-24">
+          <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+            <h2 className="text-2xl font-bold text-slate-900">The Broader Civic Stack</h2>
+            <span className="badge badge-yellow">Direction &mdash; not built yet</span>
+          </div>
+          <div className="prose-content">
+            <p>
+              Open Ethos is the values layer in a five-layer civic reasoning stack. Each layer depends on
+              the others. The decision engine (layer 3) is the working PoC; the other four layers describe
+              the surrounding system this could become part of.
             </p>
 
             <ol>
               <li>
-                <strong>Copy the AI Prompt:</strong> Click &quot;Copy Prompt&quot; to get a structured prompt you can paste
-                into your preferred AI assistant (Claude, ChatGPT, etc.). This prompt guides the AI to generate
-                properly formatted decision JSON.
+                <strong>Information Ingestion.</strong> AI-powered faithful translation of political
+                reality (bills, votes, candidates, ballot measures) into plain-language, source-linked
+                explanations.
               </li>
               <li>
-                <strong>Describe Your Decision:</strong> Tell the AI about your ethical dilemma. Be specific about
-                the context, stakeholders, and potential outcomes. The AI will generate a balanced analysis with
-                factors on both sides.
+                <strong>Guided Exploration.</strong> A conversational tutor that walks users through
+                material, probes understanding, plays devil&apos;s advocate, and pushes users to articulate
+                why they believe what they believe.
               </li>
               <li>
-                <strong>Paste the JSON:</strong> Copy the AI&apos;s response (the JSON object) and paste it into the
-                Decision JSON textarea in the app.
+                <strong>Value Formalization.</strong> Open Ethos itself: making values explicit and
+                structured. <em>This is the layer the PoC implements.</em>
               </li>
               <li>
-                <strong>Score the Decision:</strong> Click &quot;Score Decision&quot; to run the calculation. The engine will
-                compute scores for each factor and give you an overall recommendation.
+                <strong>Coherence Verification.</strong> The integrated loop where the tutor and Open
+                Ethos work together, surfacing contradictions between stated values and stated judgments
+                to drive reflection.
               </li>
               <li>
-                <strong>Review and Adjust:</strong> Examine the factor breakdown. If any parameters seem off, you can
-                edit them directly and the score will update in real-time.
-              </li>
-              <li>
-                <strong>Calibrate Your Profile:</strong> Go to the Calibration tab to adjust your axiom weights,
-                social distance weights, and moral half-life. These persist across sessions via cookies.
+                <strong>Collective Reasoning.</strong> Aggregated, anonymized profiles that reveal where
+                disagreements are factual, value-based, tribal, or merely linguistic, enabling
+                deliberation that addresses conflict at the right layer.
               </li>
             </ol>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
-              <h4 className="font-semibold text-blue-800 mb-2">Pro Tip</h4>
-              <p className="text-blue-700 text-sm">
-                Start with the example JSON to understand the format. Click &quot;Score Decision&quot; to see how the
-                engine works before generating your own decisions.
-              </p>
-            </div>
+            <p>
+              Information without engagement is passive. Engagement without value formalization produces
+              articulate tribalism. Formalization without coherence checking is shallow. Individual
+              coherence without collective aggregation does not improve collective decisions. Open Ethos
+              is the layer that makes the rest meaningful, because it is the part that turns implicit
+              values into something explicit enough to test.
+            </p>
+          </div>
+        </section>
+
+        {/* Public Profiles */}
+        <section id="public-profiles" className="card mb-6 scroll-mt-24">
+          <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+            <h2 className="text-2xl font-bold text-slate-900">Public Profiles</h2>
+            <span className="badge badge-yellow">Direction &mdash; not built yet</span>
+          </div>
+          <div className="prose-content">
+            <p>
+              By default, everything in Open Ethos is private and client-side. Publishing a profile is
+              optional and would be a deliberate, separate choice. The publishing flow is not built yet;
+              this section describes the design intent.
+            </p>
+            <p>
+              A public profile would make your calibration and case history visible and queryable. For
+              most individual users, privacy is the right default and there is no reason to publish. The
+              public profile exists for a specific purpose: it turns a value model into a commitment
+              device.
+            </p>
+            <p>
+              Once a profile is public, changing a stated judgment on a new case requires either updating
+              the profile openly (a visible, accountable act) or accepting a visible inconsistency.
+              Profile update history is itself public, so genuine value evolution is legible and silent
+              backsliding is not. People reason differently when their reasoning is on the record.
+            </p>
+            <p>
+              This is the foundation of the political accountability application. A politician,
+              candidate, or public figure who publishes a profile commits to a formal value model that
+              every subsequent vote and statement can be checked against. Third parties (journalists,
+              watchdogs, opponents, ordinary citizens) can run real-world actions through the published
+              calibration and report the coherence result. The standard being applied is the public
+              figure&apos;s own. That is what makes the accountability resistant to claims of bias.
+            </p>
+            <p>
+              The same tool, the same eight axioms, the same scoring. The only difference between an
+              individual user and a politician is who is watching, and the politician chose to be watched.
+            </p>
           </div>
         </section>
 
@@ -230,7 +472,7 @@ export default function UserGuide() {
 
             <div className="space-y-4 mt-4">
               <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                <h4 className="font-semibold text-slate-900">U — Axiom Weight (0 to 1)</h4>
+                <h4 className="font-semibold text-slate-900">U &mdash; Axiom Weight (0 to 1)</h4>
                 <p className="text-slate-600 mt-1">
                   How much you care about this moral dimension. Set in your profile&apos;s Calibration tab.
                   A weight of 1.0 means you consider this axiom maximally important; 0.5 means moderate importance;
@@ -239,7 +481,7 @@ export default function UserGuide() {
               </div>
 
               <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                <h4 className="font-semibold text-slate-900">I — Intensity Per Year (0 to 1)</h4>
+                <h4 className="font-semibold text-slate-900">I &mdash; Intensity Per Year (0 to 1)</h4>
                 <p className="text-slate-600 mt-1">
                   How severe is the impact on this axiom, per year of duration? Use the intensity anchors as
                   reference points. For life/health: 0.1 = minor illness, 1.0 = death. Impacts are always measured
@@ -248,7 +490,7 @@ export default function UserGuide() {
               </div>
 
               <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                <h4 className="font-semibold text-slate-900">T<sub>eff</sub> — Effective Duration (years)</h4>
+                <h4 className="font-semibold text-slate-900">T<sub>eff</sub> &mdash; Effective Duration (years)</h4>
                 <p className="text-slate-600 mt-1">
                   The time-discounted duration of the impact. For <strong>transition</strong> profiles, T<sub>eff</sub> comes from the time stance and the physical time_type.
                   For <strong>steady</strong> profiles (case_flow / structural), impacts are modeled as per-year flows (T<sub>eff</sub> = 1) because they recur each policy-year.
@@ -257,15 +499,15 @@ export default function UserGuide() {
               </div>
 
               <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                <h4 className="font-semibold text-slate-900">C — Confidence (0 to 1)</h4>
+                <h4 className="font-semibold text-slate-900">C &mdash; Confidence (0 to 1)</h4>
                 <p className="text-slate-600 mt-1">
-                  The probability that this impact actually occurs. Be honest here—avoid &quot;certainty theater&quot;
+                  The probability that this impact actually occurs. Be honest here &mdash; avoid &quot;certainty theater&quot;
                   where you assign 0.95 to speculative outcomes. If you&apos;re genuinely uncertain, use 0.3-0.5.
                 </p>
               </div>
 
               <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                <h4 className="font-semibold text-slate-900">P — Polarity (-1 to +1)</h4>
+                <h4 className="font-semibold text-slate-900">P &mdash; Polarity (-1 to +1)</h4>
                 <p className="text-slate-600 mt-1">
                   The direction of the impact. Negative values push the decision toward NO; positive values
                   push toward YES. A value of -1 means this factor strongly argues against the action; +1 means
@@ -274,7 +516,7 @@ export default function UserGuide() {
               </div>
 
               <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                <h4 className="font-semibold text-slate-900">S — Scale (count × social weight)</h4>
+                <h4 className="font-semibold text-slate-900">S &mdash; Scale (count × social weight)</h4>
                 <p className="text-slate-600 mt-1">
                   The number of individuals affected, weighted by their social distance from you. Self = 1.0,
                   inner circle = 0.8, tribe = 0.5, citizens = 0.3, outsiders = 0.1 by default. Adjust these in calibration.
@@ -284,8 +526,8 @@ export default function UserGuide() {
 
             <h3 className="mt-6">Decision Strength</h3>
             <p>
-              The final score is the sum of all factor scores. But the engine also calculates <strong>strength</strong>
-              using a contestation-aware formula:
+              The final score is the sum of all factor scores. The engine also reports{" "}
+              <strong>strength</strong> using a contestation-aware ratio:
             </p>
 
             <div className="bg-slate-900 text-slate-100 p-4 rounded-lg font-mono text-center my-4">
@@ -293,9 +535,9 @@ export default function UserGuide() {
             </div>
 
             <ul>
-              <li><strong>Strong</strong> (≥ 50%): Most factors align in the same direction</li>
-              <li><strong>Medium</strong> (≥ 20%): Mixed factors with a clear lean</li>
-              <li><strong>Weak</strong> (&lt; 20%): Highly contested—significant factors on both sides</li>
+              <li><strong>Strong</strong> (≥ 50%): Most factors align in the same direction.</li>
+              <li><strong>Medium</strong> (≥ 20%): Mixed factors with a clear lean.</li>
+              <li><strong>Weak</strong> (&lt; 20%): Highly contested &mdash; significant factors on both sides.</li>
             </ul>
           </div>
         </section>
@@ -305,8 +547,10 @@ export default function UserGuide() {
           <h2 className="text-2xl font-bold text-slate-900 mb-4">The Eight Axioms</h2>
           <div className="prose-content">
             <p>
-              Open Ethos uses an 8-axis framework to capture diverse moral considerations. Each axiom represents
-              a fundamental category of moral value.
+              Open Ethos uses a fixed set of eight axioms. The set is fixed deliberately: a stable
+              framework is what makes decisions comparable across cases, across users, and across time.
+              If everyone could invent their own axioms, no two profiles could be meaningfully compared,
+              and the cross-cultural and accountability applications would collapse.
             </p>
 
             <div className="space-y-4 mt-6">
@@ -379,8 +623,8 @@ export default function UserGuide() {
                     <h4 className="font-semibold text-slate-900">Suffering and Wellbeing</h4>
                     <p className="text-sm text-slate-500 font-mono">suffering_wellbeing</p>
                     <p className="text-slate-600 mt-2">
-                      Pain, joy, mental health, quality of subjective experience. This is the utilitarian
-                      dimension—the hedonic impact of actions on conscious beings.
+                      Pain, joy, mental health, quality of subjective experience. The hedonic dimension &mdash;
+                      the impact of actions on conscious beings.
                     </p>
                     <div className="mt-2 text-sm">
                       <span className="font-medium text-slate-700">Intensity anchors:</span>
@@ -400,7 +644,7 @@ export default function UserGuide() {
                     <p className="text-sm text-slate-500 font-mono">fairness_equality</p>
                     <p className="text-slate-600 mt-2">
                       Procedural justice, non-discrimination, equal treatment under rules. Not equality of
-                      outcomes, but equal application of principles.
+                      outcomes &mdash; equal application of principles.
                     </p>
                   </div>
                 </div>
@@ -415,8 +659,8 @@ export default function UserGuide() {
                     <h4 className="font-semibold text-slate-900">Truth and Epistemic Integrity</h4>
                     <p className="text-sm text-slate-500 font-mono">truth_epistemic</p>
                     <p className="text-slate-600 mt-2">
-                      Honesty, accuracy, resistance to manipulation, informed consent. Does the action promote
-                      or undermine people&apos;s ability to form true beliefs?
+                      Honesty, accuracy, resistance to manipulation, informed consent. Does the action
+                      help or hurt people&apos;s ability to form true beliefs?
                     </p>
                   </div>
                 </div>
@@ -462,28 +706,25 @@ export default function UserGuide() {
           <h2 className="text-2xl font-bold text-slate-900 mb-4">Time Integration</h2>
           <div className="prose-content">
             <p>
-              Not all impacts last the same duration, and future impacts may be valued differently than immediate
-              ones. Open Ethos uses a sophisticated time integration system.
+              Not all impacts last the same duration, and future impacts may be valued differently than
+              immediate ones. Open Ethos uses a sophisticated time integration system.
             </p>
 
             <h3>Moral Half-Life (H<sub>moral</sub>)</h3>
             <p>
-              Your moral half-life setting determines how much you discount future impacts. If your moral half-life
-              is 30 years (the default), then an impact occurring 30 years from now counts at 50% of its
-              immediate value.
+              Your moral half-life setting determines how much you discount future impacts. If your moral
+              half-life is 30 years (the default), then an impact occurring 30 years from now counts at
+              50% of its immediate value.
             </p>
             <ul>
-              <li><strong>Short half-life (10-15 years):</strong> Prioritizes near-term effects. Good for practical,
-              immediate-concern ethics.</li>
+              <li><strong>Short half-life (10-15 years):</strong> Prioritizes near-term effects. Good for practical, immediate-concern ethics.</li>
               <li><strong>Medium half-life (25-40 years):</strong> Balanced view. Default setting.</li>
-              <li><strong>Long half-life (50-100+ years):</strong> Weights future generations more heavily.
-              Good for longtermist perspectives.</li>
+              <li><strong>Long half-life (50-100+ years):</strong> Weights future generations more heavily. Good for longtermist perspectives.</li>
             </ul>
-
 
             <h3>Temporal Profiles</h3>
             <ul className="list-disc pl-6 space-y-1 text-slate-700">
-              <li><strong>transition:</strong> one-time/finite blob around the change. Uses T<sub>eff</sub> from the time stance + physical time_type.</li>
+              <li><strong>transition:</strong> one-time/finite impact around the change. Uses T<sub>eff</sub> from the time stance + physical time_type.</li>
               <li><strong>steady_case_flow:</strong> new cohorts each policy-year. Treated as per-year flow (T<sub>eff</sub> = 1).</li>
               <li><strong>steady_structural:</strong> ambient background per policy-year. Treated as per-year flow (T<sub>eff</sub> = 1).</li>
             </ul>
@@ -503,7 +744,7 @@ export default function UserGuide() {
                 A structural factor with physical half-life 20y and moral half-life 30y would have T_eff ≈ 12 years if modeled as a transition; if marked steady_structural, it is reported as MU/year.
               </p>
             </div>
-</div>
+          </div>
         </section>
 
         {/* Social Distance Section */}
@@ -511,8 +752,8 @@ export default function UserGuide() {
           <h2 className="text-2xl font-bold text-slate-900 mb-4">Social Distance Weighting</h2>
           <div className="prose-content">
             <p>
-              Most people naturally weight impacts on themselves and loved ones more heavily than impacts on
-              strangers. Open Ethos makes this explicit through social distance weights.
+              Most people weight impacts on themselves and those close to them more heavily than impacts
+              on strangers. Open Ethos makes that explicit rather than hidden.
             </p>
 
             <div className="grid sm:grid-cols-2 gap-4 my-6">
@@ -531,7 +772,7 @@ export default function UserGuide() {
               <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
                 <h4 className="font-semibold text-slate-900">Tribe (default: 0.5)</h4>
                 <p className="text-sm text-slate-600 mt-1">
-                  Extended community—colleagues, neighbors, members of groups you identify with.
+                  Extended community &mdash; colleagues, neighbors, members of groups you identify with.
                 </p>
               </div>
               <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
@@ -551,93 +792,97 @@ export default function UserGuide() {
             <h3>Adjusting for Your Ethics</h3>
             <ul>
               <li>
-                <strong>Strict impartiality:</strong> Set all weights to 1.0. Every person counts equally
+                <strong>Strict impartiality:</strong> set all weights to 1.0. Every person counts equally
                 regardless of relationship to you.
               </li>
               <li>
-                <strong>Moderate partiality:</strong> Use the defaults. Most ethical frameworks acknowledge
-                some special obligations to those close to us.
+                <strong>Moderate partiality:</strong> use the defaults. Most ethical frameworks
+                acknowledge some special obligations to those close to us.
               </li>
               <li>
-                <strong>Strong partiality:</strong> Increase self/inner_circle, decrease citizens. Reflects
-                a more agent-relative ethics.
+                <strong>Strong partiality:</strong> raise self and inner_circle, lower citizens and
+                outsiders. Reflects a more agent-relative ethics.
               </li>
             </ul>
 
             <p>
-              The scale factor (S) is calculated as: <code>S = count × social_weight</code>. So 1000 citizens
-              at 0.3 weight contributes 300 to the scale, while 1 self at 1.0 contributes 1.
+              The scale factor (S) is calculated as: <code>S = count × social_weight</code>. So 1000
+              citizens at 0.3 weight contributes 300 to the scale, while 1 self at 1.0 contributes 1.
             </p>
           </div>
         </section>
 
-        {/* JSON Structure Section */}
-        <section id="json-structure" className="card mb-6 scroll-mt-24">
-          <h2 className="text-2xl font-bold text-slate-900 mb-4">JSON Structure</h2>
+        {/* Magic Factor Section */}
+        <section id="magic-factor" className="card mb-6 scroll-mt-24">
+          <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+            <h2 className="text-2xl font-bold text-slate-900">The Magic Factor</h2>
+            <span className="badge badge-yellow">Direction &mdash; not built yet</span>
+          </div>
           <div className="prose-content">
             <p>
-              When you generate a decision with AI or create one manually, it must follow this structure:
+              The eight axioms will not capture everything. Sometimes a judgment rests on a moral
+              intuition the framework cannot express: a sense of sacredness, of betrayal, of dignity
+              violated. The magic factor is an honest escape hatch &mdash; you can add a factor outside the
+              axiom set, with a note explaining what it tracks.
+            </p>
+            <p>
+              Magic factors are displayed prominently and carry a negative visual treatment in the
+              interface. This is intentional. A magic factor is debt: a part of your reasoning you have
+              not yet articulated into the shared framework. The discomfort is the point. It pushes you
+              to either formalize the intuition into existing axioms over time or decide it does not
+              belong in your moral reasoning.
+            </p>
+            <p>
+              Magic factors are not failures. They are the visible edge of where your self-knowledge is
+              still incomplete, which is exactly where the most valuable work happens.
+            </p>
+          </div>
+        </section>
+
+        {/* Getting Started Section */}
+        <section id="getting-started" className="card mb-6 scroll-mt-24">
+          <h2 className="text-2xl font-bold text-slate-900 mb-4">Getting Started</h2>
+          <div className="prose-content">
+            <p>
+              The basic workflow:
             </p>
 
-            <pre className="bg-slate-900 text-slate-100 p-4 rounded-lg overflow-x-auto text-sm my-4">
-{`{
-  "id": "unique-decision-id",
-  "question": "The ethical question being analyzed",
-  "context": "Background information and circumstances",
-  "factors": [
-    {
-      "id": "factor-1",
-      "name": "Short factor name",
-      "description": "Detailed explanation of this factor",
-      "what_changes": "What specifically changes if action is taken",
-      "who_affected": "Who is impacted by this factor",
-      "how_much": "Qualitative description of magnitude",
-      "duration": "How long the effect lasts",
-      "temporal_profile": "transition",
-      "axiom_pairs": [
-        {
-          "axiom_id": "life_health",
-          "intensity_per_year": 0.5,
-          "time_type": "finite",
-          "duration_years": 5,
-          "physical_half_life_years": null,
-          "confidence": 0.7,
-          "polarity": -1.0,
-          "rationale": "Why this axiom applies"
-        }
-      ],
-      "scale_groups": [
-        {
-          "social_class_id": "citizens",
-          "count": 10000,
-          "description": "Population affected"
-        }
-      ]
-    }
-  ]
-}`}
-            </pre>
+            <ol>
+              <li>
+                <strong>Copy the AI Prompt.</strong> Click &quot;Copy Prompt&quot; to get a structured
+                prompt for your preferred AI assistant. It guides the AI to generate properly formatted
+                decision JSON.
+              </li>
+              <li>
+                <strong>Describe Your Decision.</strong> Tell the AI about your dilemma. Be specific
+                about context, stakeholders, and potential outcomes. The AI generates a balanced analysis
+                with factors on both sides.
+              </li>
+              <li>
+                <strong>Paste the JSON.</strong> Copy the AI&apos;s response into the Decision JSON
+                textarea.
+              </li>
+              <li>
+                <strong>Score the Decision.</strong> Click &quot;Score Decision.&quot; The engine
+                computes per-factor scores and an overall recommendation.
+              </li>
+              <li>
+                <strong>Review and Adjust.</strong> Examine the factor breakdown. Edit any parameter
+                directly and the score updates in real time.
+              </li>
+              <li>
+                <strong>Calibrate Your Profile.</strong> Use the Calibration tab to set axiom weights,
+                social distance weights, and moral half-life. Settings persist across sessions via
+                cookies.
+              </li>
+            </ol>
 
-            <h3>Key Fields Explained</h3>
-            <ul>
-              <li><strong>factors:</strong> Array of distinct considerations. Include factors on BOTH sides
-              of the decision (pro and con).</li>
-              <li><strong>temporal_profile:</strong> "transition", "steady_case_flow", or "steady_structural". Transition uses T<sub>eff</sub>; steady profiles are per-year flows.</li>
-              <li><strong>axiom_pairs:</strong> Each factor can affect multiple axioms. For instance, a factor
-              might impact both health and autonomy.</li>
-              <li><strong>time_type:</strong> Physical shape per axiom_pair: "finite" (with duration_years) or "indefinite" (with physical_half_life_years).</li>
-              <li><strong>polarity:</strong> Negative = pushes toward NO; Positive = pushes toward YES.</li>
-              <li><strong>scale_groups:</strong> Who is affected and how many. Use social_class_id (self, inner_circle, tribe, citizens, etc.).</li>
-            </ul>
-
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mt-4">
-              <h4 className="font-semibold text-red-800 mb-2">Common Mistakes</h4>
-              <ul className="text-red-700 text-sm space-y-1">
-                <li>• Forgetting to include factors on both sides of the decision</li>
-                <li>• Setting confidence too high (0.9+) for uncertain outcomes</li>
-                <li>• Using intensity 1.0 for non-death-equivalent impacts</li>
-                <li>• Mixing up polarity (remember: negative = against action)</li>
-              </ul>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+              <h4 className="font-semibold text-blue-800 mb-2">Pro Tip</h4>
+              <p className="text-blue-700 text-sm">
+                Start with the example JSON. Score it before generating your own to see how the engine
+                behaves.
+              </p>
             </div>
           </div>
         </section>
@@ -647,41 +892,40 @@ export default function UserGuide() {
           <h2 className="text-2xl font-bold text-slate-900 mb-4">Calibrating Your Profile</h2>
           <div className="prose-content">
             <p>
-              The Calibration tab lets you customize the engine to reflect your personal values. Your settings
-              are saved in browser cookies and persist across sessions.
+              The Calibration tab customizes the engine to your values. Settings are saved in browser
+              cookies.
             </p>
 
             <h3>Axiom Weights</h3>
             <p>
-              Set a weight from 0 to 1 for each of the eight axioms. This represents how important each moral
-              dimension is to you:
+              Set 0 to 1 for each of the eight axioms.
             </p>
             <ul>
-              <li><strong>0.0:</strong> This axiom doesn&apos;t factor into my moral reasoning at all</li>
-              <li><strong>0.25:</strong> Minor consideration</li>
-              <li><strong>0.5:</strong> Moderate importance (default)</li>
-              <li><strong>0.75:</strong> High priority</li>
-              <li><strong>1.0:</strong> Maximum importance—I weight this very heavily</li>
+              <li><strong>0.0:</strong> does not factor into my reasoning at all.</li>
+              <li><strong>0.25:</strong> minor consideration.</li>
+              <li><strong>0.5:</strong> moderate importance (default).</li>
+              <li><strong>0.75:</strong> high priority.</li>
+              <li><strong>1.0:</strong> maximum importance.</li>
             </ul>
 
             <h3>Social Distance Weights</h3>
             <p>
-              Adjust how much you weight impacts based on relationship proximity. See the Social Distance section
-              for details on what each group means.
+              Adjust how much you weight impacts by relationship proximity. See the Social Distance
+              section for details.
             </p>
 
             <h3>Moral Half-Life</h3>
             <p>
-              Set the number of years after which an equal impact matters 50% as much. Lower values prioritize
-              immediate effects; higher values give more weight to long-term consequences.
+              Set the number of years after which an equal impact matters 50% as much. Lower prioritizes
+              immediate effects, higher weights long-term consequences.
             </p>
 
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
-              <h4 className="font-semibold text-green-800 mb-2">Calibration Tips</h4>
+              <h4 className="font-semibold text-green-800 mb-2">Calibration philosophy</h4>
               <ul className="text-green-700 text-sm space-y-1">
-                <li>• Start with defaults and adjust based on your intuitions</li>
-                <li>• Try running the same decision with different calibrations to see how results change</li>
-                <li>• There&apos;s no &quot;correct&quot; calibration—it should reflect YOUR values</li>
+                <li>• Your weights should reflect your <strong>actual</strong> values, not what you think you &quot;should&quot; believe. The gap between those two is exactly what the engine is designed to surface, and you cannot find it if you calibrate aspirationally.</li>
+                <li>• Experiment with different calibrations to see how sensitive a result is to your assumptions.</li>
+                <li>• Recalibrate periodically. Values evolve, and that is legitimate. What is not legitimate is recalibrating case-by-case to produce the verdict you already wanted.</li>
               </ul>
             </div>
           </div>
@@ -692,41 +936,88 @@ export default function UserGuide() {
           <h2 className="text-2xl font-bold text-slate-900 mb-4">Interpreting Results</h2>
           <div className="prose-content">
             <h3>The Overall Verdict</h3>
-            <p>
-              After scoring, you&apos;ll see one of three results:
-            </p>
             <ul>
-              <li><strong>YES (positive score):</strong> The weighted factors favor taking the action</li>
-              <li><strong>NO (negative score):</strong> The weighted factors favor not taking the action</li>
-              <li><strong>NEUTRAL (near-zero score):</strong> Factors roughly balance out</li>
+              <li><strong>YES (positive score):</strong> weighted factors favor the action.</li>
+              <li><strong>NO (negative score):</strong> weighted factors favor not taking the action.</li>
+              <li><strong>NEUTRAL (near-zero score):</strong> factors roughly balance.</li>
             </ul>
 
             <h3>Strength Indicators</h3>
-            <p>
-              The strength tells you how contested the decision is:
-            </p>
             <ul>
               <li><strong>Strong:</strong> 50%+ of factor weight aligns with the verdict. Clear direction.</li>
-              <li><strong>Medium:</strong> 20-50% alignment. There are significant countervailing factors.</li>
-              <li><strong>Weak:</strong> Under 20% alignment. Highly contested—proceed with caution.</li>
+              <li><strong>Medium:</strong> 20 to 50% alignment. Significant countervailing factors.</li>
+              <li><strong>Weak:</strong> under 20% alignment. Highly contested, proceed with caution.</li>
             </ul>
 
             <h3>Factor Breakdown</h3>
             <p>
-              Click on each factor to see:
+              Click any factor to see its individual score and contribution, the axioms involved and
+              their parameters, the scale groups affected, and editable fields that update the score in
+              real time.
             </p>
-            <ul>
-              <li>The factor&apos;s individual score and contribution to the total</li>
-              <li>Which axioms are involved and their parameters</li>
-              <li>Scale groups showing who is affected</li>
-              <li>Editable fields to adjust parameters and see real-time score updates</li>
-            </ul>
 
             <h3>What the Score Means</h3>
             <p>
-              The absolute magnitude of the score reflects the overall weight of moral considerations. A score
-              of +0.5 is modest; a score of +50.0 indicates massive scale (many people, severe impacts, long
-              duration). Don&apos;t compare scores across different decisions—they&apos;re not normalized.
+              Magnitude reflects the total weight of moral considerations. +0.5 is modest. +50.0
+              indicates massive scale: many people, severe impacts, long duration. Do not compare scores
+              across different decisions &mdash; they are not normalized.
+            </p>
+
+            <h3>When You Disagree with the Result</h3>
+            <p>
+              This is the most valuable moment the engine produces. A result that contradicts your
+              intuition means one of three things: a parameter is wrong and should be adjusted, an
+              important factor is missing and should be added, or the engine has surfaced a genuine
+              tension between your stated values and your gut. The first two are fixes. The third is
+              the entire point. See the next section.
+            </p>
+          </div>
+        </section>
+
+        {/* Working Toward Coherence */}
+        <section id="coherence" className="card mb-6 scroll-mt-24">
+          <h2 className="text-2xl font-bold text-slate-900 mb-4">Working Toward Coherence</h2>
+          <div className="prose-content">
+            <p>
+              A single scored decision is useful. The real value comes from scoring many decisions and
+              watching whether your results stay consistent with each other.
+            </p>
+            <p>
+              When the engine returns a verdict that does not match the judgment you would have made on
+              your own, you have found a contradiction between your stated values and your actual
+              reasoning. There are four productive responses:
+            </p>
+            <ol>
+              <li>
+                <strong>Update the calibration.</strong> The weights were wrong. You said you valued
+                fairness at 0.8 but this case reveals you treat it more like 0.4. Fix the calibration
+                to match what you actually believe.
+              </li>
+              <li>
+                <strong>Update the judgment.</strong> Your gut reaction was a cached take, absorbed
+                from somewhere and never examined. The formal model is right and your intuition was
+                lazy. Update the judgment.
+              </li>
+              <li>
+                <strong>Add a magic factor.</strong> The framework genuinely missed something. Name it,
+                note it, and carry it as visible debt until you can formalize it.
+              </li>
+              <li>
+                <strong>Sit with a genuine value conflict.</strong> Two values you really hold point in
+                opposite directions on this case and neither is wrong. The engine cannot resolve this
+                for you. Acknowledging it clearly is still progress.
+              </li>
+            </ol>
+            <p>
+              None of these is a failure. Each one produces self-knowledge that did not exist before.
+            </p>
+            <p>
+              The long game is generalization. A user who has worked through dozens of diverse cases and
+              resolved the contradictions has a calibration that reliably predicts their own judgments
+              on cases they have never seen. That is the measurable end state: not correct opinions, but
+              a value model coherent enough to generalize. Coherence across many unseen cases is far
+              harder to fake than a good answer on any single one, which is what makes it meaningful as
+              a signal, both to yourself and, if you publish, to others.
             </p>
           </div>
         </section>
@@ -736,59 +1027,52 @@ export default function UserGuide() {
           <h2 className="text-2xl font-bold text-slate-900 mb-4">Best Practices</h2>
           <div className="prose-content">
             <h3>When Generating Decisions</h3>
-            <ol>
+            <ul>
               <li>
-                <strong>Be specific about context.</strong> The more detail you give the AI, the better it can
-                identify relevant factors.
+                <strong>Be specific about context.</strong> More detail lets the AI identify better
+                factors.
               </li>
               <li>
-                <strong>Always include factors on both sides.</strong> A one-sided analysis defeats the purpose.
-                Ask &quot;what are the strongest arguments FOR and AGAINST?&quot;
+                <strong>Always include factors on both sides.</strong> A one-sided analysis defeats the
+                purpose. Ask for the strongest arguments for and against.
               </li>
               <li>
-                <strong>Ground intensities in anchors.</strong> Don&apos;t just guess—reference the intensity scales
-                to maintain consistency.
+                <strong>Ground intensities in the anchors.</strong> Do not guess. Reference the
+                intensity scales for consistency.
               </li>
               <li>
-                <strong>Be honest about uncertainty.</strong> Use appropriate confidence levels. Most predictions
-                about the future should be 0.3-0.7, not 0.95.
+                <strong>Be honest about uncertainty.</strong> Most predictions about the future belong
+                at 0.3 to 0.7 confidence, not 0.95.
               </li>
-            </ol>
+            </ul>
 
             <h3>When Reviewing Results</h3>
-            <ol>
+            <ul>
               <li>
-                <strong>Check the factor breakdown.</strong> Does each factor make sense? Are the parameters
-                reasonable?
+                <strong>Check the factor breakdown.</strong> Does each factor make sense? Are the
+                parameters reasonable?
               </li>
               <li>
-                <strong>Adjust suspicious values.</strong> If something seems off, edit it and see how the
-                score changes.
+                <strong>Adjust suspicious values</strong> and watch how the score moves.
               </li>
               <li>
-                <strong>Consider what&apos;s missing.</strong> Are there important factors that weren&apos;t included?
-                You can add them to the JSON and rescore.
+                <strong>Consider what is missing.</strong> Add important omitted factors and rescore.
               </li>
               <li>
-                <strong>Don&apos;t take the result as gospel.</strong> This is a thinking aid, not an oracle. Use
-                it to structure your reasoning, not replace it.
+                <strong>Run sensitivity analysis.</strong> Find which parameter changes would flip the
+                verdict. That tells you where the real moral action is.
               </li>
-            </ol>
+              <li>
+                <strong>Do not treat the result as gospel.</strong> It is a thinking aid, not an oracle.
+              </li>
+            </ul>
 
-            <h3>Calibration Philosophy</h3>
-            <ol>
-              <li>
-                <strong>Your weights should reflect your actual values,</strong> not what you think you &quot;should&quot;
-                believe.
-              </li>
-              <li>
-                <strong>Experiment with different calibrations</strong> to understand how sensitive the result
-                is to your assumptions.
-              </li>
-              <li>
-                <strong>Recalibrate periodically.</strong> Your values may evolve over time.
-              </li>
-            </ol>
+            <h3>Calibration</h3>
+            <ul>
+              <li>Weights should reflect your actual values, not aspirational ones.</li>
+              <li>Experiment with alternative calibrations to test sensitivity.</li>
+              <li>Recalibrate as your values genuinely evolve, never to reverse-engineer a verdict you already wanted.</li>
+            </ul>
           </div>
         </section>
 
@@ -798,26 +1082,23 @@ export default function UserGuide() {
           <div className="prose-content">
             <h3>Example 1: Lying to Protect Feelings</h3>
             <p>
-              <strong>Question:</strong> Should I lie to a friend about their artwork to spare their feelings?
+              <strong>Question:</strong> Should I lie to a friend about their artwork to spare their
+              feelings?
             </p>
-            <p>
-              <strong>Factors that push NO (truth-telling):</strong>
-            </p>
+            <p><strong>Factors pushing NO (truth-telling):</strong></p>
             <ul>
-              <li>Damages trust if discovered (social_trust, polarity -1)</li>
-              <li>Prevents artistic growth (long_term_capacity, polarity -1)</li>
-              <li>Violates epistemic integrity (truth_epistemic, polarity -1)</li>
+              <li>Damages trust if discovered (<code>social_trust</code>, polarity -1).</li>
+              <li>Prevents artistic growth (<code>long_term_capacity</code>, polarity -1).</li>
+              <li>Violates epistemic integrity (<code>truth_epistemic</code>, polarity -1).</li>
+            </ul>
+            <p><strong>Factors pushing YES (lying):</strong></p>
+            <ul>
+              <li>Prevents immediate emotional pain (<code>suffering_wellbeing</code>, polarity +1).</li>
+              <li>Preserves immediate relationship harmony (<code>social_trust</code>, polarity +1).</li>
             </ul>
             <p>
-              <strong>Factors that push YES (lying):</strong>
-            </p>
-            <ul>
-              <li>Prevents immediate emotional pain (suffering_wellbeing, polarity +1)</li>
-              <li>Preserves immediate relationship harmony (social_trust, polarity +1)</li>
-            </ul>
-            <p>
-              A typical result might be NO (weak) or NO (medium)—the truth-telling factors often outweigh,
-              but it&apos;s contested because there are real benefits to the lie.
+              A typical result is NO (weak) or NO (medium). The truth-telling factors usually outweigh,
+              but it is contested because the lie has real benefits.
             </p>
 
             <div className="border-t border-slate-200 my-6"></div>
@@ -826,24 +1107,45 @@ export default function UserGuide() {
             <p>
               <strong>Question:</strong> Should a company mandate vaccines for employees?
             </p>
-            <p>
-              <strong>Factors that push YES (mandate):</strong>
-            </p>
+            <p><strong>Factors pushing YES (mandate):</strong></p>
             <ul>
-              <li>Reduces disease spread (life_health, many citizens affected)</li>
-              <li>Protects vulnerable populations (life_health, fairness_equality)</li>
+              <li>Reduces disease spread (<code>life_health</code>, many citizens affected).</li>
+              <li>Protects vulnerable populations (<code>life_health</code>, <code>fairness_equality</code>).</li>
+            </ul>
+            <p><strong>Factors pushing NO (no mandate):</strong></p>
+            <ul>
+              <li>Violates bodily autonomy (<code>bodily_autonomy</code>, employees affected).</li>
+              <li>Coercive pressure on employment (<code>civil_liberty</code>).</li>
+              <li>May erode trust in institutions (<code>social_trust</code>).</li>
             </ul>
             <p>
-              <strong>Factors that push NO (no mandate):</strong>
+              This often produces a contested result. The direction depends heavily on your calibration:
+              how much you weight collective health against individual autonomy.
             </p>
+
+            <div className="border-t border-slate-200 my-6"></div>
+
+            <h3>Example 3: Evaluating a Ballot Measure</h3>
+            <p>
+              <strong>Question:</strong> Should I vote for a measure that raises property taxes to fund
+              public transit?
+            </p>
+            <p><strong>Factors pushing YES:</strong></p>
             <ul>
-              <li>Violates bodily autonomy (bodily_autonomy, employees affected)</li>
-              <li>Coercive pressure on employment (civil_liberty)</li>
-              <li>May erode trust in institutions (social_trust)</li>
+              <li>Improved mobility for low-income residents (<code>suffering_wellbeing</code>, <code>fairness_equality</code>; citizens and outsiders affected).</li>
+              <li>Long-term reduction in emissions and congestion (<code>long_term_capacity</code>, <code>steady_structural</code> profile).</li>
+            </ul>
+            <p><strong>Factors pushing NO:</strong></p>
+            <ul>
+              <li>Financial burden on property owners (<code>suffering_wellbeing</code>, polarity -1; self and tribe affected).</li>
+              <li>Uncertain execution and cost overruns (low confidence on the benefit factors).</li>
             </ul>
             <p>
-              This often produces a contested result. The direction depends heavily on your calibration—how
-              much you weight collective health vs. individual autonomy.
+              The verdict here is highly calibration-dependent. A user with strong partiality (high self
+              and tribe weights) and a short moral half-life may get NO. A user with strict impartiality
+              and a long half-life will likely get YES. Running both calibrations on the same measure
+              shows you exactly where your own values sit and why reasonable people vote differently on
+              the same ballot line.
             </p>
           </div>
         </section>
@@ -856,50 +1158,73 @@ export default function UserGuide() {
               <div>
                 <h4 className="font-semibold text-slate-900">Is my data sent to any server?</h4>
                 <p className="text-slate-600">
-                  No. All scoring happens entirely in your browser. The only external call is to your AI
-                  assistant when generating decision JSON—and that&apos;s done by you manually copying/pasting.
+                  No. All scoring happens in your browser. The only external call is to your AI
+                  assistant when generating decision JSON, and that is done by you manually copying and
+                  pasting. Publishing a public profile is the one exception, and it is an explicit,
+                  separate, opt-in action (and not yet built).
                 </p>
               </div>
 
               <div>
                 <h4 className="font-semibold text-slate-900">Can I use this for important real-world decisions?</h4>
                 <p className="text-slate-600">
-                  This is a thinking aid, not a decision-maker. It can help you structure your reasoning and
-                  identify considerations you might miss, but the final judgment should always be yours.
+                  It is a thinking aid, not a decision-maker. It helps you structure reasoning and catch
+                  considerations you would miss. The final judgment is always yours.
                 </p>
               </div>
 
               <div>
-                <h4 className="font-semibold text-slate-900">Why does the score seem very large/small?</h4>
+                <h4 className="font-semibold text-slate-900">Why does the score seem very large or very small?</h4>
                 <p className="text-slate-600">
-                  Score magnitude depends on scale (number of people affected), duration, and intensity. A
-                  factor affecting millions of people will produce a much larger score than one affecting
-                  yourself. This is by design.
+                  Magnitude depends on scale, duration, and intensity. A factor affecting millions
+                  produces a much larger score than one affecting only you. This is by design.
                 </p>
               </div>
 
               <div>
                 <h4 className="font-semibold text-slate-900">What if I disagree with the result?</h4>
                 <p className="text-slate-600">
-                  Good! That means you should examine why. Either (a) some parameter is wrong and should be
-                  adjusted, (b) an important factor is missing, or (c) the engine has surfaced a genuine
-                  tension between your stated values and intuitions.
+                  Good. That is the engine working. Either a parameter is wrong, a factor is missing, or
+                  there is a genuine tension between your stated values and your intuition. See{" "}
+                  <a href="#coherence" className="text-blue-600 hover:underline">Working Toward Coherence</a>.
                 </p>
               </div>
 
               <div>
                 <h4 className="font-semibold text-slate-900">How do I reset my calibration to defaults?</h4>
                 <p className="text-slate-600">
-                  Clear your browser cookies for this site. Your profile is stored in cookies and will
-                  reset to defaults when cleared.
+                  Clear your browser cookies for this site.
                 </p>
               </div>
 
               <div>
                 <h4 className="font-semibold text-slate-900">Can I add my own axioms?</h4>
                 <p className="text-slate-600">
-                  Not currently. The 8-axiom framework is fixed to ensure consistency. However, most moral
-                  considerations can be mapped to one or more of the existing axioms.
+                  No. The eight-axiom framework is fixed to keep decisions comparable across cases,
+                  users, and cultures. If everyone used a different framework, no two profiles could be
+                  compared and the cross-cultural and accountability applications would not work. For
+                  intuitions the axioms genuinely miss, use a magic factor.
+                </p>
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-slate-900">Is the framework biased?</h4>
+                <p className="text-slate-600">
+                  The framework defines eight dimensions of moral consideration. It does not assign
+                  their weights. You do. A libertarian and a progressive using Open Ethos will reach
+                  different verdicts on the same decision because they calibrate differently, and
+                  neither is being told they are wrong. The engine checks consistency between your
+                  values and your judgments. It does not supply the values.
+                </p>
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-slate-900">How does this relate to the broader civic reasoning stack?</h4>
+                <p className="text-slate-600">
+                  Open Ethos is the value formalization layer. It can be used entirely on its own, but
+                  it is designed to connect to information, tutoring, coherence verification, and
+                  collective reasoning layers. See{" "}
+                  <a href="#broader-stack" className="text-blue-600 hover:underline">The Broader Civic Stack</a>.
                 </p>
               </div>
             </div>
@@ -909,7 +1234,7 @@ export default function UserGuide() {
         {/* Footer */}
         <footer className="text-center py-8 text-sm text-slate-500">
           <p>
-            Open Ethos Decision Engine — Transparent moral reasoning for complex decisions.
+            Open Ethos Decision Engine &mdash; Transparent moral reasoning for complex decisions.
           </p>
           <p className="mt-2">
             <Link href="/" className="text-blue-600 hover:underline">Return to App</Link>
