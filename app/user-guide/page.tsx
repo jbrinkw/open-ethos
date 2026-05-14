@@ -129,6 +129,29 @@ export default function UserGuide() {
           </div>
         </nav>
 
+        {/* Overview */}
+        <section className="card mb-6 scroll-mt-24 border-l-4 border-l-blue-500">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 text-blue-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-slate-900">Open Ethos at a glance</h2>
+              <p className="text-slate-700 leading-relaxed mt-2">
+                Open Ethos is a transparent moral decision engine. You weight eight value axioms; the
+                engine scores any decision against that framework and surfaces contradictions between
+                your stated values and your actual judgments. Done individually, it produces
+                self-knowledge that gut feel cannot. Done at scale, it becomes the first structured map
+                of what humans value, enough to make political reasoning auditable, cross-cultural
+                disagreement legible, and AI alignment trainable on something richer than thumbs-up /
+                thumbs-down.
+              </p>
+            </div>
+          </div>
+        </section>
+
         {/* Why Open Ethos Exists */}
         <section id="why" className="card mb-6 scroll-mt-24">
           <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
